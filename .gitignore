@@ -1,0 +1,29 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+.env
+.DS_Store
+
+# IDE
+.vscode/
+.idea/
+
+# Auth secrets and tokens
+config/client_secret.json
+config/token.json
+client_secret.json
+token.json
+
+# Logs
+logs/
+*.log
+
+# Downloads and outputs
+downloads/
+outputs/
+inputs/
+queue/
+queue_archive/
+FILE.mp4

@@ -1,0 +1,10 @@
+# Configuration des sources (actif)
+
+telegram:
+  enabled: true
+  token: "8221261570:AAHzS4asz2i3-dvwLqN5J-889RdT23NlSdQ"
+  allowed_chat_ids:
+    - 1403131596
+  download_dir: "inputs/telegram"
+  queue_dir: "queue"
+  filename_pattern: "{unix}_{chat}_{orig}"
