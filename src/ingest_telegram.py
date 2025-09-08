@@ -51,6 +51,11 @@ def _reply_menu_keyboard() -> ReplyKeyboardMarkup:
         ["Status", "Preview SEO", "Redo"],
         ["Quality: low", "Quality: medium", "Quality: high"],
         ["Quality: youtube", "Quality: max", "Chapters help"],
+        ["Privacy: Private", "Privacy: Public", "Privacy: Unlisted"],
+        ["Category: Gaming", "Category: Education", "Category: Entertainment"],
+        ["Subtitles: ON", "Subtitles: OFF"],
+        ["Schedule: Auto", "Schedule: Now", "Upload maintenant"],
+        ["Cancel"],
     ]
     return ReplyKeyboardMarkup(rows, resize_keyboard=True, one_time_keyboard=False)
 
@@ -223,17 +228,89 @@ def load_sources_yaml(path: str | Path) -> dict:
 
 
 def _main_menu_keyboard() -> InlineKeyboardMarkup:
-    kb = [
+    multi_accounts_enabled = False
+    try:
+        from .config_loader import load_config
+        config = load_config("config/video.yaml")
+        multi_accounts_enabled = config.get("multi_accounts", {}).get("enabled", False)
+    except:
+        pass
+
+    # Boutons persistants
+    keyboard = [
         [
-            InlineKeyboardButton("Status", callback_data="action:status"),
-            InlineKeyboardButton("Redo", callback_data="action:redo"),
-            InlineKeyboardButton("Cancel", callback_data="action:cancel"),
+            InlineKeyboardButton("📊 Status", callback_data="status"),
+            InlineKeyboardButton("👁️ Preview SEO", callback_data="preview"),
+            InlineKeyboardButton("🔄 Redo", callback_data="redo"),
         ],
         [
-            InlineKeyboardButton("Set Quality", callback_data="action:quality_menu"),
+            InlineKeyboardButton("🎥 Quality: " + current_quality.title(), callback_data="quality"),
+            InlineKeyboardButton("📝 Chapters help", callback_data="chapters_help"),
         ],
+        [
+            InlineKeyboardButton("🔒 Privacy: " + current_privacy.title(), callback_data="privacy"),
+            InlineKeyboardButton("📂 Category: " + category_name, callback_data="category"),
+        ],
+        [
+            InlineKeyboardButton("📺 Subtitles: " + ("ON" if subtitles_enabled else "OFF"), callback_data="subtitles"),
+            InlineKeyboardButton("⏰ Schedule: " + schedule_mode.title(), callback_data="schedule"),
+        ]
     ]
-    return InlineKeyboardMarkup(kb)
+    
+    # Ajouter le bouton compte si multi-comptes activé
+    if multi_accounts_enabled:
+        keyboard.append([
+            InlineKeyboardButton("👤 Account", callback_data="account"),
+        ])
+    
+    # Boutons d'action finaux
+    keyboard.append([
+        InlineKeyboardButton("🚀 Upload", callback_data="upload"),
+        InlineKeyboardButton("❌ Cancel", callback_data="cancel"),
+    ])
+    return InlineKeyboardMarkup(keyboard)
+
+
+def _account_menu_keyboard(chat_id: int) -> InlineKeyboardMarkup:
+    """Créer le menu de sélection de compte"""
+    keyboard = []
+    
+    try:
+        from .config_loader import load_config
+        config = load_config("config/video.yaml")
+        
+        if not config.get("multi_accounts", {}).get("enabled", False):
+            keyboard.append([InlineKeyboardButton("❌ Multi-comptes désactivé", callback_data="back_main")])
+        else:
+            from .multi_account_manager import create_multi_account_manager
+            manager = create_multi_account_manager()
+            
+            # Obtenir le compte actuel
+            current_account = manager.get_chat_account(str(chat_id))
+            current_id = current_account.account_id if current_account else None
+            
+            # Ajouter les comptes disponibles
+            for account in manager.accounts.values():
+                if account.enabled:
+                    status = manager.get_account_status(account.account_id)
+                    
+                    # Indicateur de sélection et statut
+                    prefix = "✅ " if account.account_id == current_id else "📺 "
+                    uploads_info = f"({status['uploads_used']}/{status['uploads_limit']})"
+                    
+                    button_text = f"{prefix}{account.name} {uploads_info}"
+                    keyboard.append([InlineKeyboardButton(button_text, callback_data=f"account:{account.account_id}")])
+            
+            if not keyboard:
+                keyboard.append([InlineKeyboardButton("❌ Aucun compte disponible", callback_data="back_main")])
+    
+    except Exception as e:
+        keyboard.append([InlineKeyboardButton(f"❌ Erreur: {str(e)[:30]}...", callback_data="back_main")])
+    
+    # Bouton retour
+    keyboard.append([InlineKeyboardButton("🔙 Retour", callback_data="back_main")])
+    
+    return InlineKeyboardMarkup(keyboard)
 
 
 def _quality_menu_keyboard() -> InlineKeyboardMarkup:
@@ -302,13 +379,143 @@ def build_application(cfg: TelegramConfig) -> Application:
                 if taskp:
                     try:
                         data = json.loads(taskp.read_text(encoding="utf-8"))
-                        if data.get("status") in (None, "pending"):
+                        if data.get("status") == "pending":
                             data.setdefault("prefs", {})["quality"] = preset
                             taskp.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
                     except Exception:
                         pass
-                await msg.reply_text(f"✅ Qualité préférée: {preset}")
+                await msg.reply_text(f"✅ Qualité définie sur '{preset}' pour ce chat.")
+            else:
+                await msg.reply_text("Qualité invalide. Utilisez: low, medium, high, youtube, max")
+        if txt.lower().startswith("privacy:"):
+            privacy = txt.split(":", 1)[1].strip().lower()
+            if privacy in ("private", "public", "unlisted"):
+                chat_id = msg.chat_id
+                prefs = _load_prefs(cfg.queue_dir, chat_id)
+                prefs["privacy_status"] = privacy
+                _save_prefs(cfg.queue_dir, chat_id, prefs)
+                taskp = _get_last_task(cfg.queue_dir, chat_id)
+                if taskp:
+                    try:
+                        data = json.loads(taskp.read_text(encoding="utf-8"))
+                        if data.get("status") == "pending":
+                            data["privacy_status"] = privacy
+                            taskp.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+                    except Exception:
+                        pass
+                await msg.reply_text(f"✅ Visibilité définie sur '{privacy}' pour ce chat.")
+            else:
+                await msg.reply_text("Visibilité invalide. Utilisez: private, public, unlisted")
+        if txt.lower().startswith("category:"):
+            category_name = txt.split(":", 1)[1].strip().lower()
+            # Mapping des catégories YouTube courantes
+            category_map = {
+                "gaming": 20,
+                "education": 27,
+                "entertainment": 24,
+                "music": 10,
+                "tech": 28,
+                "science": 28,
+                "news": 25,
+                "sports": 17,
+                "comedy": 23,
+                "howto": 26,
+                "people": 22,
+                "blogs": 22
+            }
+            if category_name in category_map:
+                category_id = category_map[category_name]
+                chat_id = msg.chat_id
+                prefs = _load_prefs(cfg.queue_dir, chat_id)
+                prefs["category_id"] = category_id
+                _save_prefs(cfg.queue_dir, chat_id, prefs)
+                taskp = _get_last_task(cfg.queue_dir, chat_id)
+                if taskp:
+                    try:
+                        data = json.loads(taskp.read_text(encoding="utf-8"))
+                        if data.get("status") == "pending":
+                            data["category_id"] = category_id
+                            taskp.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+                    except Exception:
+                        pass
+                await msg.reply_text(f"✅ Catégorie définie sur '{category_name}' (ID: {category_id}) pour ce chat.")
+            else:
+                await msg.reply_text("Catégorie invalide. Utilisez: gaming, education, entertainment, music, tech, news, sports, comedy, howto, people")
+        if txt.lower().startswith("subtitles:"):
+            setting = txt.split(":", 1)[1].strip().lower()
+            if setting in ("on", "off"):
+                enabled = setting == "on"
+                chat_id = msg.chat_id
+                prefs = _load_prefs(cfg.queue_dir, chat_id)
+                prefs["subtitles_enabled"] = enabled
+                _save_prefs(cfg.queue_dir, chat_id, prefs)
+                taskp = _get_last_task(cfg.queue_dir, chat_id)
+                if taskp:
+                    try:
+                        data = json.loads(taskp.read_text(encoding="utf-8"))
+                        if data.get("status") == "pending":
+                            data["subtitles_enabled"] = enabled
+                            taskp.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+                    except Exception:
+                        pass
+                status = "activés" if enabled else "désactivés"
+                await msg.reply_text(f"✅ Sous-titres automatiques {status} pour ce chat.")
+            else:
+                await msg.reply_text("Paramètre invalide. Utilisez: on, off")
+        if txt.lower().startswith("schedule:"):
+            mode = txt.split(":", 1)[1].strip().lower()
+            if mode in ("auto", "now"):
+                chat_id = msg.chat_id
+                prefs = _load_prefs(cfg.queue_dir, chat_id)
+                prefs["schedule_mode"] = mode
+                _save_prefs(cfg.queue_dir, chat_id, prefs)
+                taskp = _get_last_task(cfg.queue_dir, chat_id)
+                if taskp:
+                    try:
+                        data = json.loads(taskp.read_text(encoding="utf-8"))
+                        if data.get("status") == "pending":
+                            data["schedule_mode"] = mode
+                            taskp.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+                    except Exception:
+                        pass
+                mode_text = "automatique (heures optimales)" if mode == "auto" else "immédiat"
+                await msg.reply_text(f"✅ Mode de planification: {mode_text}")
+            else:
+                await msg.reply_text("Mode invalide. Utilisez: auto, now")
+        if txt.lower() == "upload maintenant":
+            chat_id = msg.chat_id
+            taskp = _get_last_task(cfg.queue_dir, chat_id)
+            if not taskp:
+                await msg.reply_text("Aucune tâche récente trouvée. Envoyez d'abord une vidéo.")
                 return
+            try:
+                data = json.loads(taskp.read_text(encoding="utf-8"))
+                if data.get("status") != "pending":
+                    await msg.reply_text(f"Tâche non pending (status: {data.get('status')}). Utilisez 'Redo' pour recréer une tâche.")
+                    return
+                # Marquer pour skip enhancement
+                data["skip_enhance"] = True
+                taskp.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+                await msg.reply_text("✅ Upload direct programmé (sans amélioration). La vidéo sera uploadée telle quelle.")
+            except Exception as e:
+                await msg.reply_text(f"Erreur: {e}")
+        if txt.lower() == "cancel":
+            chat_id = msg.chat_id
+            taskp = _get_last_task(cfg.queue_dir, chat_id)
+            if not taskp:
+                await msg.reply_text("Aucune tâche récente trouvée.")
+                return
+            try:
+                data = json.loads(taskp.read_text(encoding="utf-8"))
+                if data.get("status") != "pending":
+                    await msg.reply_text(f"Tâche non pending (status: {data.get('status')}).")
+                    return
+                data["status"] = "cancelled"
+                taskp.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+                await msg.reply_text("✅ Tâche annulée.")
+            except Exception as e:
+                await msg.reply_text(f"Erreur: {e}")
+
     app.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), _on_text_buttons))
     # Commands to enrich metadata
     async def _cmd_title(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -412,12 +619,93 @@ def build_application(cfg: TelegramConfig) -> Application:
             lines.append(f"Enhancé: {enhanced_path}")
         if youtube_id:
             lines.append(f"YouTube ID: {youtube_id}")
+        # Afficher privacy_status
+        prefs = _load_prefs(cfg.queue_dir, chat_id)
+        current_privacy = data.get("privacy_status") or prefs.get("privacy_status") or "private"
+        
+        # Afficher category_id
+        current_category_id = data.get("category_id") or prefs.get("category_id") or 22
+        category_names = {20: "Gaming", 27: "Education", 24: "Entertainment", 10: "Music", 28: "Tech", 25: "News", 17: "Sports", 23: "Comedy", 26: "Howto", 22: "People & Blogs"}
+        category_name = category_names.get(current_category_id, f"ID {current_category_id}")
+        
+        # Afficher sous-titres
+        subtitles_enabled = data.get("subtitles_enabled") or prefs.get("subtitles_enabled") or False
+        subtitles_status = "activés" if subtitles_enabled else "désactivés"
+        
+        # Afficher planification
+        schedule_mode = data.get("schedule_mode") or prefs.get("schedule_mode") or "now"
+        if schedule_mode == "auto":
+            schedule_text = "automatique (heures optimales)"
+        elif schedule_mode == "custom":
+            custom_time = data.get("custom_schedule_time") or prefs.get("custom_schedule_time")
+            if custom_time:
+                try:
+                    from datetime import datetime
+                    dt = datetime.fromisoformat(custom_time)
+                    schedule_text = f"programmé pour {dt.strftime('%d/%m/%Y à %H:%M')}"
+                except:
+                    schedule_text = "programmé (heure invalide)"
+            else:
+                schedule_text = "programmé"
+        else:
+            schedule_text = "immédiat"
+        
+        # Afficher SEO avancé si activé
+        seo_advanced_enabled = False
+        multi_accounts_enabled = False
+        current_account = "principal"
+        try:
+            from .config_loader import load_config
+            config = load_config("config/video.yaml")
+            seo_advanced_enabled = config.get("seo_advanced", {}).get("enabled", False)
+            multi_accounts_enabled = config.get("multi_accounts", {}).get("enabled", False)
+            
+            # Obtenir le compte actuel pour ce chat
+            if multi_accounts_enabled:
+                from .multi_account_manager import create_multi_account_manager
+                manager = create_multi_account_manager()
+                account = manager.get_chat_account(str(chat_id))
+                if account:
+                    current_account = account.name
+        except:
+            pass
+        
+        seo_status = "activé (tendances + concurrence)" if seo_advanced_enabled else "standard"
+        account_status = f"{current_account}" + (" (multi-comptes)" if multi_accounts_enabled else "")
+        
         lines.extend([
             "\nMétadonnées:",
             f"- Titre: {title}",
             f"- Description: {preview_desc}",
             f"- Tags: {tag_str}",
+            f"- Visibilité: {current_privacy}",
+            f"- Catégorie: {category_name}",
+            f"- Sous-titres: {subtitles_status}",
+            f"- Planification: {schedule_text}",
+            f"- SEO: {seo_status}",
+            f"- Compte: {account_status}",
         ])
+        
+        # Afficher infos sous-titres si générés
+        subtitles_info = data.get("subtitles")
+        if subtitles_info:
+            generated = subtitles_info.get("generated", [])
+            uploaded = subtitles_info.get("uploaded", [])
+            source_lang = subtitles_info.get("source_language")
+            if generated:
+                lines.append(f"- Sous-titres générés: {', '.join(generated)}")
+            if uploaded:
+                lines.append(f"- Sous-titres uploadés: {', '.join(uploaded)}")
+            if source_lang:
+                lines.append(f"- Langue détectée: {source_lang}")
+        
+        # Afficher si tâche bloquée
+        if status == "blocked":
+            error_msg = data.get("error_message", "Erreur inconnue")
+            blocked_at = data.get("blocked_at", "")
+            lines.append(f"\n⚠️ BLOQUÉ: {error_msg}")
+            if blocked_at:
+                lines.append(f"Bloqué le: {blocked_at[:19].replace('T', ' ')}")
         await msg.reply_text("\n".join(lines))
 
     app.add_handler(CommandHandler("status", _cmd_status))
@@ -520,6 +808,184 @@ def build_application(cfg: TelegramConfig) -> Application:
 
     app.add_handler(CommandHandler("chapters", _cmd_chapters))
 
+    async def _cmd_privacy(update: Update, context: ContextTypes.DEFAULT_TYPE):
+        msg = update.message
+        if not msg or not msg.text:
+            return
+        chat_id = msg.chat_id
+        parts = msg.text.split()
+        if len(parts) < 2:
+            await msg.reply_text("Usage: /privacy <private|public|unlisted>")
+            return
+        privacy = parts[1].lower()
+        if privacy not in ("private", "public", "unlisted"):
+            await msg.reply_text("Visibilité invalide. Utilisez: private, public, unlisted")
+            return
+        
+        prefs = _load_prefs(cfg.queue_dir, chat_id)
+        prefs["privacy_status"] = privacy
+        _save_prefs(cfg.queue_dir, chat_id, prefs)
+        
+        taskp = _get_last_task(cfg.queue_dir, chat_id)
+        if taskp:
+            try:
+                data = json.loads(taskp.read_text(encoding="utf-8"))
+                if data.get("status") == "pending":
+                    data["privacy_status"] = privacy
+                    taskp.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+            except Exception:
+                pass
+        await msg.reply_text(f"✅ Visibilité définie sur '{privacy}' pour ce chat.")
+
+    app.add_handler(CommandHandler("privacy", _cmd_privacy))
+
+    async def _cmd_subtitles(update: Update, context: ContextTypes.DEFAULT_TYPE):
+        msg = update.message
+        if not msg or not msg.text:
+            return
+        chat_id = msg.chat_id
+        parts = msg.text.split()
+        if len(parts) < 2:
+            await msg.reply_text("Usage: /subtitles <on|off>")
+            return
+        
+        setting = parts[1].lower()
+        if setting not in ["on", "off"]:
+            await msg.reply_text("Usage: /subtitles <on|off>")
+            return
+        
+        enabled = setting == "on"
+        prefs = _load_prefs(cfg.queue_dir, chat_id)
+        prefs["subtitles_enabled"] = enabled
+        _save_prefs(cfg.queue_dir, chat_id, prefs)
+        
+        # Mettre à jour la dernière tâche en attente
+        taskp = _get_last_task(cfg.queue_dir, chat_id)
+        if taskp:
+            try:
+                data = json.loads(taskp.read_text(encoding="utf-8"))
+                if data.get("status") == "pending":
+                    data["subtitles_enabled"] = enabled
+                    taskp.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+            except Exception:
+                pass
+        
+        status = "activés" if enabled else "désactivés"
+        await msg.reply_text(f"✅ Sous-titres automatiques {status} pour ce chat.")
+
+    app.add_handler(CommandHandler("subtitles", _cmd_subtitles))
+
+    async def _cmd_schedule(update: Update, context: ContextTypes.DEFAULT_TYPE):
+        msg = update.message
+        if not msg or not msg.text:
+            return
+        chat_id = msg.chat_id
+        parts = msg.text.split()
+        if len(parts) < 2:
+            await msg.reply_text("Usage: /schedule <auto|now|YYYY-MM-DD HH:MM>")
+            return
+        
+        schedule_arg = " ".join(parts[1:])
+        
+        if schedule_arg.lower() == "auto":
+            # Mode automatique
+            prefs = _load_prefs(cfg.queue_dir, chat_id)
+            prefs["schedule_mode"] = "auto"
+            _save_prefs(cfg.queue_dir, chat_id, prefs)
+            await msg.reply_text("✅ Mode planification automatique activé (heures optimales)")
+            
+        elif schedule_arg.lower() == "now":
+            # Mode immédiat
+            prefs = _load_prefs(cfg.queue_dir, chat_id)
+            prefs["schedule_mode"] = "now"
+            _save_prefs(cfg.queue_dir, chat_id, prefs)
+            await msg.reply_text("✅ Mode planification immédiate activé")
+            
+        else:
+            # Heure spécifique
+            try:
+                from datetime import datetime
+                scheduled_time = datetime.strptime(schedule_arg, "%Y-%m-%d %H:%M")
+                
+                # Vérifier que c'est dans le futur
+                if scheduled_time <= datetime.now():
+                    await msg.reply_text("❌ L'heure doit être dans le futur")
+                    return
+                
+                # Sauvegarder l'heure spécifique
+                prefs = _load_prefs(cfg.queue_dir, chat_id)
+                prefs["schedule_mode"] = "custom"
+                prefs["custom_schedule_time"] = scheduled_time.isoformat()
+                _save_prefs(cfg.queue_dir, chat_id, prefs)
+                
+                # Mettre à jour la dernière tâche
+                taskp = _get_last_task(cfg.queue_dir, chat_id)
+                if taskp:
+                    try:
+                        data = json.loads(taskp.read_text(encoding="utf-8"))
+                        if data.get("status") == "pending":
+                            data["schedule_mode"] = "custom"
+                            data["custom_schedule_time"] = scheduled_time.isoformat()
+                            taskp.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+                    except Exception:
+                        pass
+                
+                await msg.reply_text(f"✅ Upload planifié pour le {scheduled_time.strftime('%d/%m/%Y à %H:%M')}")
+                
+            except ValueError:
+                await msg.reply_text("❌ Format invalide. Utilisez: YYYY-MM-DD HH:MM (ex: 2024-12-25 18:30)")
+
+    app.add_handler(CommandHandler("schedule", _cmd_schedule))
+
+    async def _cmd_category(update: Update, context: ContextTypes.DEFAULT_TYPE):
+        msg = update.message
+        if not msg or not msg.text:
+            return
+        chat_id = msg.chat_id
+        parts = msg.text.split()
+        if len(parts) < 2:
+            await msg.reply_text("Usage: /category <gaming|education|entertainment|music|tech|news|sports|comedy|howto|people>")
+            return
+        category_name = parts[1].lower()
+        
+        # Mapping des catégories YouTube courantes
+        category_map = {
+            "gaming": 20,
+            "education": 27,
+            "entertainment": 24,
+            "music": 10,
+            "tech": 28,
+            "science": 28,
+            "news": 25,
+            "sports": 17,
+            "comedy": 23,
+            "howto": 26,
+            "people": 22,
+            "blogs": 22
+        }
+        
+        if category_name not in category_map:
+            await msg.reply_text("Catégorie invalide. Utilisez: gaming, education, entertainment, music, tech, news, sports, comedy, howto, people")
+            return
+        
+        category_id = category_map[category_name]
+        prefs = _load_prefs(cfg.queue_dir, chat_id)
+        prefs["category_id"] = category_id
+        _save_prefs(cfg.queue_dir, chat_id, prefs)
+        
+        taskp = _get_last_task(cfg.queue_dir, chat_id)
+        if taskp:
+            try:
+                data = json.loads(taskp.read_text(encoding="utf-8"))
+                if data.get("status") == "pending":
+                    data["category_id"] = category_id
+                    taskp.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+            except Exception:
+                pass
+        await msg.reply_text(f"✅ Catégorie définie sur '{category_name}' (ID: {category_id}) pour ce chat.")
+
+    app.add_handler(CommandHandler("category", _cmd_category))
+
     async def _cmd_set(update: Update, context: ContextTypes.DEFAULT_TYPE):
         msg = update.message
         if not msg or not msg.text:
@@ -604,6 +1070,10 @@ def build_application(cfg: TelegramConfig) -> Application:
     app.add_handler(CommandHandler("set", _cmd_set))
     app.add_handler(CommandHandler("cancel", _cmd_cancel))
     app.add_handler(CommandHandler("redo", _cmd_redo))
+    
+    # Enregistrer les commandes de gestion des comptes
+    from .account_commands import register_account_commands
+    register_account_commands(app)
 
     async def _on_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         query = update.callback_query
@@ -619,6 +1089,37 @@ def build_application(cfg: TelegramConfig) -> Application:
         if data == "action:back_main":
             await query.edit_message_reply_markup(reply_markup=_main_menu_keyboard())
             return
+        if data == "action:account_menu":
+            await query.edit_message_reply_markup(reply_markup=_account_menu_keyboard(chat_id))
+            return
+        # Account selection
+        if data.startswith("account:"):
+            account_id = data.split(":", 1)[1]
+            if chat_id is None:
+                return
+            
+            # Vérifier si multi-comptes activé
+            try:
+                from .config_loader import load_config
+                config = load_config("config/video.yaml")
+                if not config.get("multi_accounts", {}).get("enabled", False):
+                    await query.edit_message_text("❌ Multi-comptes désactivé", reply_markup=_main_menu_keyboard())
+                    return
+                
+                from .multi_account_manager import create_multi_account_manager
+                manager = create_multi_account_manager()
+                
+                if manager.set_chat_account(str(chat_id), account_id):
+                    account = manager.accounts.get(account_id)
+                    account_name = account.name if account else account_id
+                    await query.edit_message_text(f"✅ Compte sélectionné: {account_name}", reply_markup=_main_menu_keyboard())
+                else:
+                    await query.edit_message_text("❌ Erreur lors de la sélection du compte", reply_markup=_main_menu_keyboard())
+                    
+            except Exception as e:
+                await query.edit_message_text(f"❌ Erreur: {str(e)}", reply_markup=_main_menu_keyboard())
+            return
+        
         # Status / Redo / Cancel
         if data == "action:status":
             # Afficher status sous forme de nouveau message pour garder le menu

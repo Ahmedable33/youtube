@@ -16,7 +16,7 @@ privacy_status: private  # private | public | unlisted
 publish_at: "2025-08-31T12:00:00Z"  # Optionnel (RFC3339/UTC). Requiert privacy_status=private.
 
 # Enfants (optionnel)
-made_for_kids: false
+made_for_kids: false  # Désactivé par défaut
 
 # Amélioration qualité (optionnel)
 enhance:
@@ -47,3 +47,77 @@ seo:
   provider: ollama                 # ollama | openai | none
   model: llama3.1:8b-instruct      # modèle Ollama par défaut
   host: http://localhost:11434     # hôte Ollama
+
+# Sous-titres automatiques (désactivé par défaut)
+subtitles:
+  enabled: false
+  whisper_model: "base"  # tiny, base, small, medium, large
+  languages: ["fr"]  # Langues à générer
+  auto_detect: true  # Détecter automatiquement la langue source
+  translate_to_english: false  # Traduire vers l'anglais
+  upload_to_youtube: true  # Uploader sur YouTube
+  draft_mode: false  # Mode brouillon (pas publié immédiatement)
+  replace_existing: false          # Remplacer les sous-titres existants
+
+# Configuration IA Vision pour détection automatique de contenu
+vision:
+  enabled: false  # Activer l'analyse automatique par IA Vision
+  provider: "openai"  # openai, google, ollama
+  frames_to_analyze: 3  # Nombre de frames à analyser
+  confidence_threshold: 0.6  # Seuil de confiance minimum
+  
+  # Configuration OpenAI Vision
+  openai:
+    api_key: null  # Clé API OpenAI (ou variable d'environnement OPENAI_API_KEY)
+    model: "gpt-4-vision-preview"
+    
+  # Configuration Google Vision
+  google:
+    credentials_path: null  # Chemin vers le fichier de credentials JSON
+    
+  # Configuration Ollama (local)
+  ollama:
+    base_url: "http://localhost:11434"
+    model: "llava"  # Modèle vision Ollama
+
+# Configuration SEO avancé
+seo_advanced:
+  enabled: false  # Activer l'optimisation SEO avancée
+  youtube_api_key: null  # Clé API YouTube Data v3 (ou variable YOUTUBE_API_KEY)
+  
+  # Tendances et concurrence
+  trends:
+    enabled: true
+    region: "FR"  # Code région pour les tendances
+    update_interval: 3600  # Mise à jour des tendances (secondes)
+    cache_duration: 1800  # Durée cache des résultats (secondes)
+  
+  # Analyse de concurrence
+  competitor_analysis:
+    enabled: true
+    max_competitors: 20  # Nombre max de concurrents à analyser
+    min_views_threshold: 1000  # Seuil minimum de vues pour analyse
+  
+  # Tests A/B
+  ab_testing:
+    enabled: false  # Activer les tests A/B automatiques
+    storage_path: "./ab_tests"  # Répertoire de stockage des tests
+    auto_generate_variants: true  # Générer automatiquement des variants
+    max_variants: 4  # Nombre max de variants par test
+
+# Configuration multi-comptes YouTube
+multi_accounts:
+  enabled: false  # Activer la gestion multi-comptes
+  config_path: "config/multi_accounts.json"  # Fichier de configuration des comptes
+  
+  # Stratégie de load balancing
+  load_balancing:
+    strategy: "quota_based"  # quota_based, round_robin, least_used
+    auto_switch: true  # Basculer automatiquement si quota atteint
+    fallback_enabled: true  # Utiliser compte de fallback si nécessaire
+  
+  # Limites par défaut pour nouveaux comptes
+  default_limits:
+    daily_quota_limit: 10000  # Quota API YouTube par jour
+    daily_upload_limit: 6     # Nombre max d'uploads par jour
+    api_calls_per_upload: 1600  # Coût API estimé par upload
