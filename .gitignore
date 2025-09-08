@@ -3,6 +3,8 @@ __pycache__/
 *.py[cod]
 *.egg-info/
 .venv/
+.venv*/
+.venv312/
 .env
 .DS_Store
 
@@ -13,6 +15,7 @@ __pycache__/
 # Auth secrets and tokens
 config/client_secret.json
 config/token.json
+config/sources.yaml
 client_secret.json
 token.json
 

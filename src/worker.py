@@ -10,16 +10,17 @@ from typing import Optional
 from src.config_loader import load_config, ConfigError
 from src.video_enhance import enhance_video, EnhanceError
 from src.ai_generator import MetaRequest, generate_metadata
-from .thumbnail_generator import get_best_thumbnail
-from .ai_generator import generate_metadata
-from .uploader import upload_to_youtube
-from .video_enhance import enhance_video
-from .youtube_captions import generate_and_upload_captions
-from .scheduler import get_optimal_upload_time, should_delay_upload
-from .vision_analyzer import analyze_video_content
-from .multi_account_manager import create_multi_account_manager
-from src.auth import get_credentials, DEFAULT_CLIENT_SECRETS, DEFAULT_TOKEN_FILE
 from src.uploader import upload_video
+from src.scheduler import UploadScheduler
+from src.auth import get_credentials, DEFAULT_CLIENT_SECRETS, DEFAULT_TOKEN_FILE
+from src.subtitle_generator import (
+    is_whisper_available,
+    detect_language,
+    generate_subtitles,
+)
+from src.youtube_captions import smart_upload_captions
+from .thumbnail_generator import get_best_thumbnail
+from .multi_account_manager import create_multi_account_manager
 
 from googleapiclient.errors import ResumableUploadError
 
@@ -82,7 +83,10 @@ def _quality_defaults(name: Optional[str]) -> dict:
 
 
 def _read_tasks(queue_dir: Path) -> list[Path]:
-    return sorted(queue_dir.glob("task_*.json"))
+    # Inclure les tâches normales et celles issues du scheduler
+    tasks = list(queue_dir.glob("task_*.json"))
+    tasks += list(queue_dir.glob("scheduled_*.json"))
+    return sorted(tasks)
 
 
 def _load_task(path: Path) -> dict:
@@ -392,13 +396,33 @@ def process_queue(*, queue_dir: str | Path, archive_dir: str | Path, config_path
             description = user_meta.get("description") if user_meta.get("description") else None
             tags = list(user_meta.get("tags") or [])
 
-            # Si des champs manquent, compléter via l'IA
-            if not title or not description or not tags:
+            # Si des champs manquent ou si config impose le titre IA depuis la description
+            try:
+                seo_cfg = (cfg or {}).get("seo") if isinstance(cfg, dict) else None
+                if not seo_cfg:
+                    # Fallback: lire le YAML brut pour récupérer le bloc seo
+                    try:
+                        import yaml
+                        cfg_path = Path(config_path) if config_path else Path("config/video.yaml")
+                        if cfg_path.exists():
+                            raw_doc = yaml.safe_load(cfg_path.read_text(encoding="utf-8")) or {}
+                            seo_cfg = raw_doc.get("seo")
+                    except Exception:
+                        seo_cfg = None
+                seo_provider = (seo_cfg or {}).get("provider") if isinstance(seo_cfg, dict) else None
+                seo_model = (seo_cfg or {}).get("model") if isinstance(seo_cfg, dict) else None
+                seo_host = (seo_cfg or {}).get("host") if isinstance(seo_cfg, dict) else None
+                force_ai_title = bool((seo_cfg or {}).get("force_title_from_description", False)) if isinstance(seo_cfg, dict) else False
+                # Préférence par chat : surchage le YAML si présent
                 try:
-                    seo_cfg = (cfg or {}).get("seo") if isinstance(cfg, dict) else None
-                    seo_provider = (seo_cfg or {}).get("provider") if isinstance(seo_cfg, dict) else None
-                    seo_model = (seo_cfg or {}).get("model") if isinstance(seo_cfg, dict) else None
-                    seo_host = (seo_cfg or {}).get("host") if isinstance(seo_cfg, dict) else None
+                    task_prefs = (task.get("prefs") or {}) if isinstance(task, dict) else {}
+                    if "ai_title_force" in task_prefs:
+                        force_ai_title = bool(task_prefs.get("ai_title_force"))
+                except Exception:
+                    pass
+
+                need_ai = force_ai_title or (not title or not description or not tags)
+                if need_ai:
                     req = MetaRequest(
                         topic=_default_title_for(video_path),
                         language=((cfg or {}).get("language") or "fr"),
@@ -412,28 +436,31 @@ def process_queue(*, queue_dir: str | Path, archive_dir: str | Path, config_path
                         provider=seo_provider,
                         model=seo_model or "llama3.1:8b-instruct",
                         host=seo_host,
-                        input_text=description if (description and not title) else None,
+                        input_text=description or None,
                     )
                     ai_meta = generate_metadata(req, video_path=str(video_path))
-                    if not title:
+
+                    # Titre: toujours remplacer si force_ai_title, sinon seulement s'il manque
+                    if force_ai_title or not title:
                         title = ai_meta.get("title") or _default_title_for(video_path)
+                    # Description/Tags: compléter seulement si manquants
                     if not description:
                         description = ai_meta.get("description") or ""
                     if not tags:
                         tags = ai_meta.get("tags") or []
                     # Stocker la catégorie générée automatiquement pour usage ultérieur
                     ai_generated_category = ai_meta.get("category_id")
-                except Exception as e:
-                    log.warning("AI metadata non générées (%s), on complète avec des valeurs par défaut.", e)
+                else:
                     ai_generated_category = None
-                    if not title:
-                        title = _default_title_for(video_path)
-                    if not description:
-                        description = ""
-                    if not tags:
-                        tags = []
-            else:
+            except Exception as e:
+                log.warning("AI metadata non générées (%s), on complète avec des valeurs par défaut.", e)
                 ai_generated_category = None
+                if not title:
+                    title = _default_title_for(video_path)
+                if not description:
+                    description = ""
+                if not tags:
+                    tags = []
 
             # Normaliser tags (unicité, minuscule)
             if tags:
@@ -441,8 +468,16 @@ def process_queue(*, queue_dir: str | Path, archive_dir: str | Path, config_path
 
             # Obtenir les credentials YouTube avec gestion multi-comptes
             try:
-                config = load_config()
-                multi_accounts_enabled = config.get("multi_accounts", {}).get("enabled", False)
+                # Charger la config brute pour lire multi_accounts (ne pas utiliser load_config qui normalise)
+                import yaml
+                raw_cfg_path = Path("config/video.yaml")
+                multi_accounts_enabled = False
+                if raw_cfg_path.exists():
+                    try:
+                        raw_cfg = yaml.safe_load(raw_cfg_path.read_text(encoding="utf-8")) or {}
+                        multi_accounts_enabled = bool((raw_cfg.get("multi_accounts") or {}).get("enabled", False))
+                    except Exception:
+                        multi_accounts_enabled = False
                 
                 if multi_accounts_enabled:
                     # Utiliser le gestionnaire multi-comptes
@@ -467,8 +502,9 @@ def process_queue(*, queue_dir: str | Path, archive_dir: str | Path, config_path
                 else:
                     # Mode single compte classique
                     credentials = get_credentials(
-                        client_secrets_file=DEFAULT_CLIENT_SECRETS,
-                        token_file=DEFAULT_TOKEN_FILE
+                        SCOPES,
+                        client_secrets_path=DEFAULT_CLIENT_SECRETS,
+                        token_path=DEFAULT_TOKEN_FILE
                     )
                     upload_account_id = None
                     
@@ -520,7 +556,7 @@ def process_queue(*, queue_dir: str | Path, archive_dir: str | Path, config_path
 
             try:
                 resp = upload_video(
-                    creds,
+                    credentials,
                     video_path=str(enhanced),
                     title=title,
                     description=description,
@@ -554,7 +590,7 @@ def process_queue(*, queue_dir: str | Path, archive_dir: str | Path, config_path
                     task_path.write_text(json.dumps(task, ensure_ascii=False, indent=2), encoding="utf-8")
                     
                     # Archiver la tâche bloquée
-                    archive_path = archive_dir / task_path.name
+                    archive_path = adir / task_path.name
                     shutil.move(str(task_path), str(archive_path))
                     
                     log.info(f"Tâche marquée comme bloquée et archivée: {archive_path}")
@@ -599,7 +635,7 @@ def process_queue(*, queue_dir: str | Path, archive_dir: str | Path, config_path
                     log.error("Erreur marquage tâche planifiée terminée: %s", e)
 
             # Archive
-            dest = archive_dir / task_path.name
+            dest = adir / task_path.name
             shutil.move(str(task_path), str(dest))
             
         except Exception as e:

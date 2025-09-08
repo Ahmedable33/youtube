@@ -47,6 +47,7 @@ seo:
   provider: ollama                 # ollama | openai | none
   model: llama3.1:8b-instruct      # modèle Ollama par défaut
   host: http://localhost:11434     # hôte Ollama
+  force_title_from_description: true  # Forcer la génération du titre par l'IA à partir de la description
 
 # Sous-titres automatiques (désactivé par défaut)
 subtitles:

@@ -54,6 +54,7 @@ def _reply_menu_keyboard() -> ReplyKeyboardMarkup:
         ["Privacy: Private", "Privacy: Public", "Privacy: Unlisted"],
         ["Category: Gaming", "Category: Education", "Category: Entertainment"],
         ["Subtitles: ON", "Subtitles: OFF"],
+        ["AI Title: ON", "AI Title: OFF"],
         ["Schedule: Auto", "Schedule: Now", "Upload maintenant"],
         ["Cancel"],
     ]
@@ -75,6 +76,7 @@ async def _help(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         "/title <texte> - Définir le titre SEO pour la dernière tâche\n"
         "/desc <texte> - Définir la description pour la dernière tâche\n"
         "/tags <liste> - Définir les tags (séparés par virgule ou #hashtags) pour la dernière tâche\n"
+        "/ai_title <on|off|toggle|status> - Forcer le titre IA à partir de la description (préférence du chat)\n"
         "Envoyez simplement une vidéo (avec une légende facultative): la vidéo sera traitée."
     )
 
@@ -462,6 +464,26 @@ def build_application(cfg: TelegramConfig) -> Application:
                 await msg.reply_text(f"✅ Sous-titres automatiques {status} pour ce chat.")
             else:
                 await msg.reply_text("Paramètre invalide. Utilisez: on, off")
+        if txt.lower().startswith("ai title:"):
+            setting = txt.split(":", 1)[1].strip().lower()
+            if setting in ("on", "off"):
+                force = setting == "on"
+                chat_id = msg.chat_id
+                prefs = _load_prefs(cfg.queue_dir, chat_id)
+                prefs["ai_title_force"] = force
+                _save_prefs(cfg.queue_dir, chat_id, prefs)
+                taskp = _get_last_task(cfg.queue_dir, chat_id)
+                if taskp:
+                    try:
+                        data = json.loads(taskp.read_text(encoding="utf-8"))
+                        if data.get("status") == "pending":
+                            data.setdefault("prefs", {})["ai_title_force"] = force
+                            taskp.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+                    except Exception:
+                        pass
+                await msg.reply_text("✅ Titre IA: " + ("activé" if force else "désactivé"))
+            else:
+                await msg.reply_text("Paramètre invalide. Utilisez: on, off")
         if txt.lower().startswith("schedule:"):
             mode = txt.split(":", 1)[1].strip().lower()
             if mode in ("auto", "now"):
@@ -582,6 +604,65 @@ def build_application(cfg: TelegramConfig) -> Application:
     app.add_handler(CommandHandler("title", _cmd_title))
     app.add_handler(CommandHandler("desc", _cmd_desc))
     app.add_handler(CommandHandler("tags", _cmd_tags))
+
+    async def _cmd_ai_title(update: Update, context: ContextTypes.DEFAULT_TYPE):
+        msg = update.message
+        if not msg:
+            return
+        chat_id = msg.chat_id
+        prefs = _load_prefs(cfg.queue_dir, chat_id)
+        parts = (msg.text or "").split(maxsplit=1)
+        arg = parts[1].strip().lower() if len(parts) > 1 else "status"
+
+        current = bool(prefs.get("ai_title_force", False))
+        if arg in ("on", "enable", "enabled"):
+            prefs["ai_title_force"] = True
+            _save_prefs(cfg.queue_dir, chat_id, prefs)
+            # Met à jour la dernière tâche pending
+            taskp = _get_last_task(cfg.queue_dir, chat_id)
+            if taskp:
+                try:
+                    data = json.loads(taskp.read_text(encoding="utf-8"))
+                    if data.get("status") == "pending":
+                        data.setdefault("prefs", {})["ai_title_force"] = True
+                        taskp.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+                except Exception:
+                    pass
+            await msg.reply_text("✅ Titre IA: activé (forcé depuis la description).")
+            return
+        if arg in ("off", "disable", "disabled"):
+            prefs["ai_title_force"] = False
+            _save_prefs(cfg.queue_dir, chat_id, prefs)
+            taskp = _get_last_task(cfg.queue_dir, chat_id)
+            if taskp:
+                try:
+                    data = json.loads(taskp.read_text(encoding="utf-8"))
+                    if data.get("status") == "pending":
+                        data.setdefault("prefs", {})["ai_title_force"] = False
+                        taskp.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+                except Exception:
+                    pass
+            await msg.reply_text("✅ Titre IA: désactivé (le titre utilisateur est respecté).")
+            return
+        if arg in ("toggle",):
+            new_val = not current
+            prefs["ai_title_force"] = new_val
+            _save_prefs(cfg.queue_dir, chat_id, prefs)
+            taskp = _get_last_task(cfg.queue_dir, chat_id)
+            if taskp:
+                try:
+                    data = json.loads(taskp.read_text(encoding="utf-8"))
+                    if data.get("status") == "pending":
+                        data.setdefault("prefs", {})["ai_title_force"] = new_val
+                        taskp.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+                except Exception:
+                    pass
+            await msg.reply_text("✅ Titre IA: " + ("activé" if new_val else "désactivé"))
+            return
+        # status
+        await msg.reply_text("ℹ️ Titre IA actuel: " + ("activé" if current else "désactivé"))
+
+    app.add_handler(CommandHandler("ai_title", _cmd_ai_title))
 
     async def _cmd_status(update: Update, context: ContextTypes.DEFAULT_TYPE):
         msg = update.message
@@ -728,28 +809,52 @@ def build_application(cfg: TelegramConfig) -> Application:
         title = meta.get("title")
         description = meta.get("description") or ""
         tags = list(meta.get("tags") or [])
-        # Compléter au besoin via IA en utilisant la description comme input_text
-        if not title or not tags:
-            try:
-                req = MetaRequest(
-                    topic=(title or Path(data.get("video_path", "video.mp4")).stem),
-                    language=meta.get("language") or "fr",
-                    tone=meta.get("tone") or "informatif",
-                    include_hashtags=True,
-                    max_tags=15,
-                    max_title_chars=70,
-                    model="gpt-4o-mini",
-                    input_text=description or None,
-                )
-                ai = generate_metadata(req)
-                title = title or ai.get("title")
-                if not description:
-                    description = ai.get("description") or ""
-                if not tags:
-                    tags = ai.get("tags") or []
-            except Exception as e:
-                # Si OPENAI_API_KEY absent ou autre erreur, garder ce qu'on a
-                pass
+        # Charger provider/model/host depuis la config (aligné avec le worker)
+        seo_provider = seo_model = seo_host = None
+        force_ai_title = False
+        try:
+            from .config_loader import load_config
+            video_cfg = load_config("config/video.yaml")
+            seo_cfg = (video_cfg or {}).get("seo") or {}
+            seo_provider = seo_cfg.get("provider")
+            seo_model = seo_cfg.get("model")
+            seo_host = seo_cfg.get("host")
+            force_ai_title = bool(seo_cfg.get("force_title_from_description", False))
+        except Exception:
+            pass
+        # Préférence par chat qui surchage la config YAML
+        try:
+            prefs = _load_prefs(cfg.queue_dir, chat_id)
+            if "ai_title_force" in prefs:
+                force_ai_title = bool(prefs.get("ai_title_force"))
+        except Exception:
+            pass
+        # Compléter via IA en utilisant la description comme input_text
+        try:
+            req = MetaRequest(
+                topic=(title or Path(data.get("video_path", "video.mp4")).stem),
+                language=meta.get("language") or "fr",
+                tone=meta.get("tone") or "informatif",
+                include_hashtags=True,
+                max_tags=15,
+                max_title_chars=70,
+                provider=seo_provider,
+                model=seo_model,
+                host=seo_host,
+                include_category=True,
+                input_text=description or None,
+            )
+            ai = generate_metadata(req, video_path=data.get("video_path"))
+            # Titre: forcer si demandé, sinon seulement s'il manque
+            if force_ai_title or not title:
+                title = ai.get("title") or title
+            if not description:
+                description = ai.get("description") or ""
+            if not tags:
+                tags = ai.get("tags") or []
+        except Exception:
+            # Si le provider choisi est indisponible, garder ce qu'on a
+            pass
         # Normaliser tags
         if tags:
             tags = sorted({str(t).strip().lstrip('#').lower() for t in tags if str(t).strip()})

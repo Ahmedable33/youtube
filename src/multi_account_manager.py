@@ -8,7 +8,7 @@ import json
 import os
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, Iterable
 from dataclasses import dataclass, asdict
 import hashlib
 
@@ -364,17 +364,35 @@ class MultiAccountManager:
         """Obtenir le statut de tous les comptes"""
         return [self.get_account_status(acc_id) for acc_id in self.accounts.keys()]
     
-    def get_credentials_for_account(self, account_id: str):
-        """Obtenir les credentials pour un compte spécifique"""
+    def get_credentials_for_account(
+        self,
+        account_id: str,
+        scopes: Optional[Iterable[str]] = None,
+        headless: bool = False,
+    ):
+        """Obtenir les credentials pour un compte spécifique.
+        Args:
+            account_id: ID du compte configuré.
+            scopes: Scopes OAuth requis. Défaut: scopes YouTube upload.
+            headless: Flux OAuth en console.
+        """
         if account_id not in self.accounts:
             raise ValueError(f"Compte inexistant: {account_id}")
-        
+
         account = self.accounts[account_id]
-        
+
+        if scopes is None:
+            scopes = [
+                "https://www.googleapis.com/auth/youtube.upload",
+                "https://www.googleapis.com/auth/youtube.force-ssl",
+            ]
+
         try:
             return get_credentials(
-                client_secrets_file=account.credentials_path,
-                token_file=account.token_path
+                scopes,
+                client_secrets_path=account.credentials_path,
+                token_path=account.token_path,
+                headless=headless,
             )
         except Exception as e:
             log.error(f"Erreur récupération credentials pour {account_id}: {e}")
