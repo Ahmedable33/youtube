@@ -1,0 +1,15 @@
+# Configuration des sources d'ingestion
+
+telegram:
+  enabled: true
+  token: "VOTRE_BOT_TOKEN_ICI"         # @BotFather
+  allowed_chat_ids:                    # ID de chat autorisés (entiers)
+    - 123456789
+  download_dir: "inputs/telegram"       # où sauvegarder les vidéos reçues
+  queue_dir: "queue"                    # où créer les tâches à traiter
+  filename_pattern: "{unix}_{chat}_{orig}"
+
+# Placeholders disponibles pour filename_pattern:
+# - {unix}: timestamp epoch
+# - {chat}: chat_id
+# - {orig}: nom original (si disponible)

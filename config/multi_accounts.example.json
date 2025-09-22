@@ -1,0 +1,43 @@
+{
+  "accounts": [
+    {
+      "account_id": "main",
+      "name": "Chaîne Principale",
+      "channel_id": "",
+      "credentials_path": "config/credentials_main.json",
+      "token_path": "config/token_main.json",
+      "daily_quota_limit": 10000,
+      "daily_upload_limit": 6,
+      "enabled": true
+    },
+    {
+      "account_id": "gaming",
+      "name": "Chaîne Gaming",
+      "channel_id": "",
+      "credentials_path": "config/credentials_gaming.json",
+      "token_path": "config/token_gaming.json",
+      "daily_quota_limit": 10000,
+      "daily_upload_limit": 6,
+      "enabled": true
+    },
+    {
+      "account_id": "tech",
+      "name": "Chaîne Tech",
+      "channel_id": "",
+      "credentials_path": "config/credentials_tech.json",
+      "token_path": "config/token_tech.json",
+      "daily_quota_limit": 10000,
+      "daily_upload_limit": 6,
+      "enabled": true
+    }
+  ],
+  "chat_mappings": {
+    "123456789": "main",
+    "987654321": "gaming"
+  },
+  "load_balancing": {
+    "strategy": "quota_based",
+    "auto_switch": true,
+    "fallback_enabled": true
+  }
+}

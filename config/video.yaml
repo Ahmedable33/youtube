@@ -1,0 +1,127 @@
+# Configuration active pour upload YouTube (copiée depuis video.example.yaml)
+
+# Chemins de fichiers
+video_path: ./video.mp4
+thumbnail_path: ./thumbnail.jpg  # optionnel
+
+# Métadonnées
+title: "Mon titre automatisé"
+description: |
+  Ma description détaillée sur plusieurs lignes.
+tags: ["automation", "python"]
+category_id: 22  # 22 = People & Blogs
+
+# Statut et planification
+privacy_status: private  # private | public | unlisted
+publish_at: "2025-08-31T12:00:00Z"  # Optionnel (RFC3339/UTC). Requiert privacy_status=private.
+
+# Enfants (optionnel)
+made_for_kids: false  # Désactivé par défaut
+
+# Amélioration qualité (optionnel)
+enhance:
+  enabled: true            # si true, améliore automatiquement avant upload
+  quality: youtube         # low | medium | high | youtube | max (préréglage par défaut)
+  codec: h264              # h264 | hevc | vp9 | av1
+  hwaccel: none            # none | auto | videotoolbox (préférer x264 logiciel pour qualité CRF stable)
+  scale: null              # pas d'upscale forcé; garder la résolution source pour préserver la netteté
+  fps: 30                 # optionnel
+  denoise: false          # éviter le lissage excessif
+  sharpen: true           # unsharp
+  deband: true            # gradfun pour réduire le banding
+  deblock: false          # éviter d'adoucir l'image si la source est propre
+  sharpen_amount: 1.0     # intensité de netteté (0.0-1.5)
+  contrast: 1.08          # contraste (1.0 = neutre)
+  saturation: 1.12        # saturation (1.0 = neutre)
+  deinterlace: false      # yadif
+  color_fix: false        # désactivé car contrast/saturation définis explicitement
+  loudnorm: false         # normalisation loudness EBU R128 (impose ré-encodage audio)
+  crf: 16                 # plus net (moins compressé). Ignoré si bitrate défini
+  bitrate: null           # ex: "6M". Si défini, ignore CRF
+  preset: slow            # ultrafast…veryslow (par défaut medium)
+  reencode_audio: true
+  audio_bitrate: "192k"
+
+# SEO (génération Titre/Description/Tags)
+seo:
+  provider: ollama                 # ollama | openai | none
+  model: llama3.2:3b               # modèle Ollama par défaut (plus léger et rapide)
+  host: http://127.0.0.1:11434     # hôte Ollama (127.0.0.1 pour éviter IPv6 sur localhost)
+  num_predict: 120                 # limite de tokens générés (plus bas = plus rapide)
+  timeout_seconds: 300             # délai max de réponse (seconds)
+  fast_mode: true                  # mode rapide: 3 requêtes courtes (titre, description, tags)
+  force_title_from_description: true  # Forcer la génération du titre par l'IA à partir de la description
+
+# Sous-titres automatiques (désactivé par défaut)
+subtitles:
+  enabled: false
+  whisper_model: "base"  # tiny, base, small, medium, large
+  languages: ["fr"]  # Langues à générer
+  auto_detect: true  # Détecter automatiquement la langue source
+  translate_to_english: false  # Traduire vers l'anglais
+  upload_to_youtube: true  # Uploader sur YouTube
+  draft_mode: false  # Mode brouillon (pas publié immédiatement)
+  replace_existing: false          # Remplacer les sous-titres existants
+
+# Configuration IA Vision pour détection automatique de contenu
+vision:
+  enabled: false  # Activer l'analyse automatique par IA Vision
+  provider: "openai"  # openai, google, ollama
+  frames_to_analyze: 3  # Nombre de frames à analyser
+  confidence_threshold: 0.6  # Seuil de confiance minimum
+  
+  # Configuration OpenAI Vision
+  openai:
+    api_key: null  # Clé API OpenAI (ou variable d'environnement OPENAI_API_KEY)
+    model: "gpt-4-vision-preview"
+    
+  # Configuration Google Vision
+  google:
+    credentials_path: null  # Chemin vers le fichier de credentials JSON
+    
+  # Configuration Ollama (local)
+  ollama:
+    base_url: "http://localhost:11434"
+    model: "llava"  # Modèle vision Ollama
+
+# Configuration SEO avancé
+seo_advanced:
+  enabled: false  # Activer l'optimisation SEO avancée
+  youtube_api_key: null  # Clé API YouTube Data v3 (ou variable YOUTUBE_API_KEY)
+  
+  # Tendances et concurrence
+  trends:
+    enabled: true
+    region: "FR"  # Code région pour les tendances
+    update_interval: 3600  # Mise à jour des tendances (secondes)
+    cache_duration: 1800  # Durée cache des résultats (secondes)
+  
+  # Analyse de concurrence
+  competitor_analysis:
+    enabled: true
+    max_competitors: 20  # Nombre max de concurrents à analyser
+    min_views_threshold: 1000  # Seuil minimum de vues pour analyse
+  
+  # Tests A/B
+  ab_testing:
+    enabled: false  # Activer les tests A/B automatiques
+    storage_path: "./ab_tests"  # Répertoire de stockage des tests
+    auto_generate_variants: true  # Générer automatiquement des variants
+    max_variants: 4  # Nombre max de variants par test
+
+# Configuration multi-comptes YouTube
+multi_accounts:
+  enabled: false  # Activer la gestion multi-comptes
+  config_path: "config/multi_accounts.json"  # Fichier de configuration des comptes
+  
+  # Stratégie de load balancing
+  load_balancing:
+    strategy: "quota_based"  # quota_based, round_robin, least_used
+    auto_switch: true  # Basculer automatiquement si quota atteint
+    fallback_enabled: true  # Utiliser compte de fallback si nécessaire
+  
+  # Limites par défaut pour nouveaux comptes
+  default_limits:
+    daily_quota_limit: 10000  # Quota API YouTube par jour
+    daily_upload_limit: 6     # Nombre max d'uploads par jour
+    api_calls_per_upload: 1600  # Coût API estimé par upload

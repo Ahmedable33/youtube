@@ -1,0 +1,22 @@
+source .venv312/bin/activate
+python main.py telegram-bot --sources config/sources.yaml
+
+
+source .venv312/bin/activate
+python main.py worker --queue-dir queue --archive-dir queue_archive --config config/video.yaml --log-level INFO
+
+
+
+
+source .venv312/bin/activate
+python scheduler_daemon.py --schedule-dir ./schedule --queue-dir ./queue --archive-dir ./queue_archive --interval 60
+
+
+source .venv312/bin/activate
+python monitor.py --host 127.0.0.1 --port 8000 --queue-dir ./queue --archive-dir ./queue_archive
+
+ollama serve
+
+
+
+ python start_services.py --sources config/sources.yaml --config config/video.yaml --queue-dir queue --archive-dir queue_archive --schedule-dir schedule --monitor-host 127.0.0.1 --monitor-port 8000 --log-level INFO

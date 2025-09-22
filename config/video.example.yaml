@@ -1,0 +1,43 @@
+# Exemple de configuration pour un upload YouTube
+
+# Chemins de fichiers
+video_path: ./video.mp4
+thumbnail_path: ./thumbnail.jpg  # optionnel
+
+# Métadonnées
+title: "Mon titre automatisé"
+description: |
+  Ma description détaillée sur plusieurs lignes.
+tags: ["automation", "python"]
+category_id: 22  # 22 = People & Blogs
+
+# Statut et planification
+privacy_status: private  # private | public | unlisted
+publish_at: "2025-08-31T12:00:00Z"  # Optionnel (RFC3339/UTC). Requiert privacy_status=private.
+
+# Enfants (optionnel)
+made_for_kids: false
+
+# Amélioration qualité (optionnel)
+enhance:
+  enabled: true            # si true, améliore automatiquement avant upload
+  quality: youtube         # low | medium | high | youtube | max (préréglage par défaut)
+  codec: h264              # h264 | hevc | vp9 | av1
+  hwaccel: auto            # none | auto | videotoolbox (auto => videotoolbox sur macOS)
+  scale: 1080p            # 720p|1080p|1440p|2160p|WIDTHxHEIGHT|1.5x|2x
+  fps: 30                 # optionnel
+  denoise: true           # hqdn3d
+  sharpen: true           # unsharp
+  deband: true            # gradfun pour réduire le banding
+  deblock: true           # deblock pour atténuer les macroblocs
+  sharpen_amount: 0.9     # intensité de netteté (0.0-1.5, 0.9 conseillé pour plus de netteté)
+  contrast: 1.08          # contraste (1.0 = neutre)
+  saturation: 1.12        # saturation (1.0 = neutre)
+  deinterlace: false      # yadif
+  color_fix: false        # désactivé car contrast/saturation définis explicitement
+  loudnorm: false         # normalisation loudness EBU R128 (impose ré-encodage audio)
+  crf: 18                 # ignoré si bitrate défini
+  bitrate: null           # ex: "6M". Si défini, ignore CRF
+  preset: slow            # ultrafast…veryslow (par défaut medium)
+  reencode_audio: true
+  audio_bitrate: "192k"
