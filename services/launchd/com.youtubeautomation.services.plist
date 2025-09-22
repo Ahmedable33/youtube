@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+  <dict>
+    <key>Label</key>
+    <string>com.youtubeautomation.services</string>
+
+    <key>ProgramArguments</key>
+    <array>
+      <string>/Users/hamux/Desktop/PROJET/youtube-automation/.venv312/bin/python</string>
+      <string>/Users/hamux/Desktop/PROJET/youtube-automation/start_services.py</string>
+      <string>--sources</string>
+      <string>/Users/hamux/Desktop/PROJET/youtube-automation/config/sources.yaml</string>
+      <string>--config</string>
+      <string>/Users/hamux/Desktop/PROJET/youtube-automation/config/video.yaml</string>
+      <string>--queue-dir</string>
+      <string>/Users/hamux/Desktop/PROJET/youtube-automation/queue</string>
+      <string>--archive-dir</string>
+      <string>/Users/hamux/Desktop/PROJET/youtube-automation/queue_archive</string>
+      <string>--schedule-dir</string>
+      <string>/Users/hamux/Desktop/PROJET/youtube-automation/schedule</string>
+      <string>--monitor-host</string>
+      <string>127.0.0.1</string>
+      <string>--monitor-port</string>
+      <string>8000</string>
+      <string>--log-level</string>
+      <string>INFO</string>
+      <string>--auto-restart</string>
+      <string>--restart-backoff</string>
+      <string>3.0</string>
+    </array>
+
+    <key>WorkingDirectory</key>
+    <string>/Users/hamux/Desktop/PROJET/youtube-automation</string>
+
+    <key>EnvironmentVariables</key>
+    <dict>
+      <!-- Ajoutez OPENAI_API_KEY ici si vous utilisez OpenAI -->
+      <!-- <key>OPENAI_API_KEY</key><string>sk-...</string> -->
+      <key>PATH</key>
+      <string>/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+      <key>OLLAMA_HOST</key>
+      <string>http://localhost:11434</string>
+    </dict>
+
+    <key>KeepAlive</key>
+    <true/>
+    <key>RunAtLoad</key>
+    <true/>
+
+    <key>StandardOutPath</key>
+    <string>/Users/hamux/Desktop/PROJET/youtube-automation/logs/launchd-out.log</string>
+    <key>StandardErrorPath</key>
+    <string>/Users/hamux/Desktop/PROJET/youtube-automation/logs/launchd-err.log</string>
+  </dict>
+</plist>

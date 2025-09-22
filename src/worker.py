@@ -1,0 +1,669 @@
+from __future__ import annotations
+
+import json
+import logging
+import shutil
+from datetime import datetime
+from pathlib import Path
+from typing import Optional
+
+from src.config_loader import load_config, ConfigError
+from src.video_enhance import enhance_video, EnhanceError
+from src.ai_generator import MetaRequest, generate_metadata
+from src.uploader import upload_video
+from src.scheduler import UploadScheduler
+from src.auth import get_credentials, DEFAULT_CLIENT_SECRETS, DEFAULT_TOKEN_FILE
+from src.subtitle_generator import (
+    is_whisper_available,
+    detect_language,
+    generate_subtitles,
+)
+from src.youtube_captions import smart_upload_captions
+from .thumbnail_generator import get_best_thumbnail
+from .multi_account_manager import create_multi_account_manager
+
+from googleapiclient.errors import ResumableUploadError
+
+
+log = logging.getLogger("worker")
+
+SCOPES = [
+    "https://www.googleapis.com/auth/youtube.upload",
+    "https://www.googleapis.com/auth/youtube.force-ssl",
+]
+
+
+def _quality_defaults(name: Optional[str]) -> dict:
+    if not name:
+        return {}
+    q = (name or "").lower()
+    presets = {
+        "low": {
+            "scale": None,
+            "crf": 23,
+            "preset": "fast",
+            "denoise": True,
+            "sharpen": False,
+            "color_fix": True,
+        },
+        "medium": {
+            "scale": "1080p",
+            "crf": 20,
+            "preset": "medium",
+            "denoise": True,
+            "sharpen": True,
+            "color_fix": True,
+        },
+        "high": {
+            "scale": "1440p",
+            "crf": 18,
+            "preset": "slow",
+            "denoise": True,
+            "sharpen": True,
+            "color_fix": True,
+        },
+        "youtube": {
+            "scale": "1080p",
+            "crf": 20,
+            "preset": "slow",
+            "denoise": True,
+            "sharpen": True,
+            "color_fix": True,
+        },
+        "max": {
+            "scale": "2160p",
+            "crf": 17,
+            "preset": "slow",
+            "denoise": True,
+            "sharpen": True,
+            "color_fix": True,
+        },
+    }
+    return presets.get(q, {})
+
+
+def _read_tasks(queue_dir: Path) -> list[Path]:
+    # Inclure les tâches normales et celles issues du scheduler
+    tasks = list(queue_dir.glob("task_*.json"))
+    tasks += list(queue_dir.glob("scheduled_*.json"))
+    return sorted(tasks)
+
+
+def _load_task(path: Path) -> dict:
+    with open(path, "r", encoding="utf-8") as f:
+        return json.load(f)
+
+
+def _save_task(path: Path, data: dict) -> None:
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+
+
+def _process_subtitles(creds, video_id: str, video_path: Path, subtitles_cfg: dict, task: dict):
+    """
+    Génère et upload les sous-titres pour une vidéo
+    
+    Args:
+        creds: Credentials YouTube
+        video_id: ID de la vidéo YouTube
+        video_path: Chemin vers la vidéo
+        subtitles_cfg: Configuration des sous-titres
+        task: Données de la tâche
+    """
+    if not is_whisper_available():
+        log.warning("Whisper non disponible, sous-titres ignorés. Installez avec: pip install openai-whisper")
+        return
+    
+    model = subtitles_cfg.get("whisper_model", "base")
+    languages = subtitles_cfg.get("languages", ["fr"])
+    auto_detect = subtitles_cfg.get("auto_detect_language", True)
+    translate_en = subtitles_cfg.get("translate_to_english", False)
+    upload_youtube = subtitles_cfg.get("upload_to_youtube", True)
+    draft_mode = subtitles_cfg.get("draft_mode", False)
+    replace_existing = subtitles_cfg.get("replace_existing", False)
+    
+    # Dossier de sortie pour les sous-titres
+    subtitles_dir = video_path.parent / "subtitles"
+    subtitles_dir.mkdir(exist_ok=True)
+    
+    log.info("Génération sous-titres pour vidéo %s", video_id)
+    
+    try:
+        # Détecter la langue source si demandé
+        source_language = None
+        if auto_detect:
+            try:
+                source_language = detect_language(video_path, model)
+                log.info("Langue détectée: %s", source_language)
+            except Exception as e:
+                log.warning("Échec détection langue: %s", e)
+        
+        # Si pas de détection, utiliser la première langue de la liste
+        if not source_language and languages:
+            source_language = languages[0]
+        
+        subtitle_files = {}
+        
+        # Générer pour chaque langue demandée
+        for lang in languages:
+            try:
+                srt_path = subtitles_dir / f"{video_path.stem}_{lang}.srt"
+                
+                if lang == source_language:
+                    # Transcription dans la langue source
+                    generate_subtitles(
+                        video_path=video_path,
+                        output_path=srt_path,
+                        language=source_language,
+                        model=model
+                    )
+                elif lang == "en" and translate_en:
+                    # Traduction vers l'anglais
+                    generate_subtitles(
+                        video_path=video_path,
+                        output_path=srt_path,
+                        language=source_language,
+                        model=model,
+                        translate_to_english=True
+                    )
+                else:
+                    # Génération directe dans la langue cible
+                    generate_subtitles(
+                        video_path=video_path,
+                        output_path=srt_path,
+                        language=lang,
+                        model=model
+                    )
+                
+                if srt_path.exists():
+                    subtitle_files[lang] = srt_path
+                    log.info("Sous-titres générés: %s", srt_path)
+                
+            except Exception as e:
+                log.error("Échec génération sous-titres %s: %s", lang, e)
+        
+        # Ajouter traduction anglaise si demandée et pas déjà présente
+        if translate_en and "en" not in subtitle_files and source_language != "en":
+            try:
+                en_srt_path = subtitles_dir / f"{video_path.stem}_en.srt"
+                generate_subtitles(
+                    video_path=video_path,
+                    output_path=en_srt_path,
+                    language=source_language,
+                    model=model,
+                    translate_to_english=True
+                )
+                if en_srt_path.exists():
+                    subtitle_files["en"] = en_srt_path
+                    log.info("Traduction anglaise générée: %s", en_srt_path)
+            except Exception as e:
+                log.error("Échec traduction anglaise: %s", e)
+        
+        # Upload vers YouTube si demandé
+        if upload_youtube and subtitle_files:
+            try:
+                results = smart_upload_captions(
+                    credentials=creds,
+                    video_id=video_id,
+                    subtitle_files=subtitle_files,
+                    replace_existing=replace_existing,
+                    is_draft=draft_mode
+                )
+                
+                # Logger les résultats
+                for lang, result in results.items():
+                    if result.get("success"):
+                        action = result.get("action", "unknown")
+                        log.info("Sous-titres %s %s: %s", lang, action, result.get("caption_id"))
+                    else:
+                        log.error("Échec upload sous-titres %s: %s", lang, result.get("error"))
+                
+                # Sauvegarder les infos dans la tâche
+                task["subtitles"] = {
+                    "generated": list(subtitle_files.keys()),
+                    "uploaded": [lang for lang, result in results.items() if result.get("success")],
+                    "source_language": source_language
+                }
+                
+            except Exception as e:
+                log.error("Erreur upload sous-titres vers YouTube: %s", e)
+        else:
+            # Sauvegarder seulement les infos de génération
+            task["subtitles"] = {
+                "generated": list(subtitle_files.keys()),
+                "uploaded": [],
+                "source_language": source_language
+            }
+        
+    except Exception as e:
+        log.error("Erreur génération sous-titres: %s", e)
+        raise
+
+
+def _default_title_for(video_path: Path) -> str:
+    return video_path.stem.replace("_", " ")[:90]
+
+
+def _handle_scheduled_task(task: dict, task_path: Path, scheduler: UploadScheduler) -> bool:
+    """
+    Gérer une tâche avec planification
+    
+    Returns:
+        True si la tâche doit être traitée maintenant, False si elle doit être planifiée
+    """
+    schedule_mode = task.get("schedule_mode", "now")
+    
+    if schedule_mode == "now":
+        return True
+    
+    elif schedule_mode == "auto":
+        # Planifier automatiquement aux heures optimales
+        try:
+            scheduled_task = scheduler.schedule_task(task_path)
+            log.info(f"Tâche planifiée automatiquement: {scheduled_task.task_id} pour {scheduled_task.scheduled_time}")
+            return False
+        except Exception as e:
+            log.error(f"Erreur planification automatique: {e}")
+            return True  # Fallback: traiter immédiatement
+    
+    elif schedule_mode == "custom":
+        # Planifier à une heure spécifique
+        custom_time_str = task.get("custom_schedule_time")
+        if custom_time_str:
+            try:
+                from datetime import datetime
+                import pytz
+                
+                custom_time = datetime.fromisoformat(custom_time_str)
+                # Ajouter timezone si manquant
+                if custom_time.tzinfo is None:
+                    tz = pytz.timezone("Europe/Paris")
+                    custom_time = tz.localize(custom_time)
+                
+                # Vérifier si c'est dans le futur
+                now = datetime.now(pytz.timezone("Europe/Paris"))
+                if custom_time <= now:
+                    log.warning(f"Heure planifiée dans le passé, traitement immédiat: {custom_time}")
+                    return True
+                
+                scheduled_task = scheduler.schedule_task(task_path, scheduled_time=custom_time)
+                log.info(f"Tâche planifiée pour {custom_time}: {scheduled_task.task_id}")
+                return False
+                
+            except Exception as e:
+                log.error(f"Erreur planification personnalisée: {e}")
+                return True  # Fallback: traiter immédiatement
+        else:
+            log.warning("Mode custom sans heure spécifiée, traitement immédiat")
+            return True
+    
+    return True  # Fallback par défaut
+
+
+def process_queue(*, queue_dir: str | Path, archive_dir: str | Path, config_path: Optional[str | Path] = None, log_level: str = "INFO") -> None:
+    logging.basicConfig(level=getattr(logging, log_level), format="%(asctime)s | %(levelname)s | %(name)s | %(message)s")
+    qdir = Path(queue_dir)
+    adir = Path(archive_dir)
+    qdir.mkdir(parents=True, exist_ok=True)
+    adir.mkdir(parents=True, exist_ok=True)
+
+    # Initialiser le scheduler pour la planification
+    schedule_dir = qdir.parent / "schedule"
+    scheduler = UploadScheduler(
+        config_path=config_path or Path("config/video.yaml"),
+        schedule_dir=schedule_dir
+    )
+
+    cfg = None
+    if config_path:
+        try:
+            cfg = load_config(config_path)
+        except ConfigError as e:
+            log.warning("Config non chargée (%s), on continue avec des valeurs par défaut.", e)
+            cfg = None
+
+    for task_path in _read_tasks(qdir):
+        try:
+            task = _load_task(task_path)
+            if task.get("status") not in (None, "pending", "error"):
+                continue
+            
+            # Vérifier si la tâche doit être planifiée
+            if not _handle_scheduled_task(task, task_path, scheduler):
+                # Tâche planifiée, la supprimer de la queue normale
+                archive_path = adir / task_path.name
+                shutil.move(str(task_path), str(archive_path))
+                log.info(f"Tâche déplacée vers planification: {task_path.name}")
+                continue
+            video_path = Path(task["video_path"]).resolve()
+            if not video_path.exists():
+                log.error("Vidéo introuvable: %s", video_path)
+                task["status"] = "error"
+                task["error"] = f"Video not found: {video_path}"
+                _save_task(task_path, task)
+                # Archiver la tâche en erreur pour ne pas bloquer la file
+                archive_path = adir / task_path.name
+                shutil.move(str(task_path), str(archive_path))
+                log.info(f"Tâche archivée (erreur fichier manquant): {archive_path}")
+                continue
+
+            # Enhance: fusion presets qualité depuis la tâche (prefs.quality) + config
+            enhance_cfg = (cfg or {}).get("enhance") if isinstance(cfg, dict) else None
+            task_prefs = (task.get("prefs") or {}) if isinstance(task, dict) else {}
+            qname = (task_prefs or {}).get("quality")
+            if qname:
+                base = _quality_defaults(qname)
+                # le preset fournit des valeurs par défaut; la config existante a priorité s'il y a conflit
+                enhance_cfg = {**base, **(enhance_cfg or {})}
+
+            # Amélioration vidéo (si activée et non skippée)
+            enhanced = Path(video_path)
+            skip_enhance = task.get("skip_enhance", False)
+            
+            if skip_enhance:
+                log.info("Amélioration skippée (upload direct demandé)")
+            elif enhance_cfg and enhance_cfg.get("enabled", True):
+                try:
+                    log.info("Amélioration vidéo en cours...")
+                    out_path = video_path.with_name(video_path.stem + ".enhanced.mp4")
+                    enhanced = enhance_video(
+                        input_path=video_path,
+                        output_path=out_path,
+                        codec=(enhance_cfg or {}).get("codec", "h264"),
+                        hwaccel=(enhance_cfg or {}).get("hwaccel", "none"),
+                        scale=(enhance_cfg or {}).get("scale"),
+                        fps=(enhance_cfg or {}).get("fps"),
+                        denoise=bool((enhance_cfg or {}).get("denoise", False)),
+                        sharpen=bool((enhance_cfg or {}).get("sharpen", False)),
+                        deband=bool((enhance_cfg or {}).get("deband", False)),
+                        deblock=bool((enhance_cfg or {}).get("deblock", False)),
+                        sharpen_amount=(enhance_cfg or {}).get("sharpen_amount"),
+                        contrast=(enhance_cfg or {}).get("contrast"),
+                        saturation=(enhance_cfg or {}).get("saturation"),
+                        deinterlace=bool((enhance_cfg or {}).get("deinterlace", False)),
+                        color_fix=bool((enhance_cfg or {}).get("color_fix", False)),
+                        loudnorm=bool((enhance_cfg or {}).get("loudnorm", False)),
+                        crf=(enhance_cfg or {}).get("crf"),
+                        bitrate=(enhance_cfg or {}).get("bitrate"),
+                        preset=(enhance_cfg or {}).get("preset", "medium"),
+                        reencode_audio=bool((enhance_cfg or {}).get("reencode_audio", True)),
+                        audio_bitrate=(enhance_cfg or {}).get("audio_bitrate", "192k")
+                    )
+                    log.info("Amélioration terminée: %s", enhanced)
+                except EnhanceError as e:
+                    log.error("Erreur d'amélioration: %s", e)
+                    # Continuer avec la vidéo originale
+                    enhanced = Path(video_path)
+
+            # Métadonnées SEO: privilégier celles fournies dans la tâche (via Telegram)
+            user_meta = (task.get("meta") or {}) if isinstance(task, dict) else {}
+            title = user_meta.get("title") if user_meta.get("title") else None
+            description = user_meta.get("description") if user_meta.get("description") else None
+            tags = list(user_meta.get("tags") or [])
+
+            # Si des champs manquent ou si config impose le titre IA depuis la description
+            try:
+                seo_cfg = (cfg or {}).get("seo") if isinstance(cfg, dict) else None
+                if not seo_cfg:
+                    # Fallback: lire le YAML brut pour récupérer le bloc seo
+                    try:
+                        import yaml
+                        cfg_path = Path(config_path) if config_path else Path("config/video.yaml")
+                        if cfg_path.exists():
+                            raw_doc = yaml.safe_load(cfg_path.read_text(encoding="utf-8")) or {}
+                            seo_cfg = raw_doc.get("seo")
+                    except Exception:
+                        seo_cfg = None
+                seo_provider = (seo_cfg or {}).get("provider") if isinstance(seo_cfg, dict) else None
+                seo_model = (seo_cfg or {}).get("model") if isinstance(seo_cfg, dict) else None
+                seo_host = (seo_cfg or {}).get("host") if isinstance(seo_cfg, dict) else None
+                force_ai_title = bool((seo_cfg or {}).get("force_title_from_description", False)) if isinstance(seo_cfg, dict) else False
+                # Préférence par chat : surchage le YAML si présent
+                try:
+                    task_prefs = (task.get("prefs") or {}) if isinstance(task, dict) else {}
+                    if "ai_title_force" in task_prefs:
+                        force_ai_title = bool(task_prefs.get("ai_title_force"))
+                except Exception:
+                    pass
+
+                need_ai = force_ai_title or (not title or not description or not tags)
+                if need_ai:
+                    req = MetaRequest(
+                        topic=_default_title_for(video_path),
+                        language=((cfg or {}).get("language") or "fr"),
+                        tone=((cfg or {}).get("tone") or "informatif"),
+                        target_keywords=None,
+                        channel_style=None,
+                        include_hashtags=True,
+                        include_category=True,
+                        max_tags=15,
+                        max_title_chars=70,
+                        provider=seo_provider,
+                        model=seo_model or "llama3.1:8b",
+                        host=seo_host,
+                        input_text=description or None,
+                    )
+                    ai_meta = generate_metadata(req, video_path=str(video_path))
+
+                    # Titre: toujours remplacer si force_ai_title, sinon seulement s'il manque
+                    if force_ai_title or not title:
+                        title = ai_meta.get("title") or _default_title_for(video_path)
+                    # Description/Tags: compléter seulement si manquants
+                    if not description:
+                        description = ai_meta.get("description") or ""
+                    if not tags:
+                        tags = ai_meta.get("tags") or []
+                    # Stocker la catégorie générée automatiquement pour usage ultérieur
+                    ai_generated_category = ai_meta.get("category_id")
+                else:
+                    ai_generated_category = None
+            except Exception as e:
+                log.warning("AI metadata non générées (%s), on complète avec des valeurs par défaut.", e)
+                ai_generated_category = None
+                if not title:
+                    title = _default_title_for(video_path)
+                if not description:
+                    description = ""
+                if not tags:
+                    tags = []
+
+            # Normaliser tags (unicité, minuscule)
+            if tags:
+                tags = sorted({str(t).strip().lstrip('#').lower() for t in tags if str(t).strip()})
+
+            # Obtenir les credentials YouTube avec gestion multi-comptes
+            try:
+                # Charger la config brute pour lire multi_accounts (ne pas utiliser load_config qui normalise)
+                import yaml
+                raw_cfg_path = Path("config/video.yaml")
+                multi_accounts_enabled = False
+                if raw_cfg_path.exists():
+                    try:
+                        raw_cfg = yaml.safe_load(raw_cfg_path.read_text(encoding="utf-8")) or {}
+                        multi_accounts_enabled = bool((raw_cfg.get("multi_accounts") or {}).get("enabled", False))
+                    except Exception:
+                        multi_accounts_enabled = False
+                
+                if multi_accounts_enabled:
+                    # Utiliser le gestionnaire multi-comptes
+                    manager = create_multi_account_manager()
+                    
+                    # Obtenir le compte pour ce chat ou le meilleur compte disponible
+                    chat_id = task.get("chat_id")
+                    if chat_id:
+                        account = manager.get_chat_account(str(chat_id))
+                    else:
+                        account = manager.get_best_account_for_upload()
+                    
+                    if not account:
+                        log.error("Aucun compte YouTube disponible pour upload")
+                        # Marquer la tâche en erreur et archiver
+                        try:
+                            task["status"] = "error"
+                            task["error"] = "No YouTube account available"
+                            _save_task(task_path, task)
+                            archive_path = adir / task_path.name
+                            shutil.move(str(task_path), str(archive_path))
+                            log.info(f"Tâche archivée (aucun compte disponible): {archive_path}")
+                        except Exception as _e:
+                            log.warning(f"Impossible d'archiver la tâche sans compte: {_e}")
+                        continue
+                    
+                    log.info(f"Utilisation du compte: {account.name} ({account.account_id})")
+                    credentials = manager.get_credentials_for_account(account.account_id)
+                    
+                    # Enregistrer l'utilisation du compte après upload réussi
+                    upload_account_id = account.account_id
+                else:
+                    # Mode single compte classique
+                    credentials = get_credentials(
+                        SCOPES,
+                        client_secrets_path=DEFAULT_CLIENT_SECRETS,
+                        token_path=DEFAULT_TOKEN_FILE
+                    )
+                    upload_account_id = None
+                    
+            except Exception as e:
+                log.error(f"Erreur credentials YouTube: {e}")
+                return False
+
+            # Champs additionnels YouTube
+            cfg_lang = (cfg or {}).get("language") if isinstance(cfg, dict) else None
+            cfg_priv = (cfg or {}).get("privacy_status") if isinstance(cfg, dict) else None
+            cfg_cat = (cfg or {}).get("category_id") if isinstance(cfg, dict) else None
+            cfg_license = (cfg or {}).get("license") if isinstance(cfg, dict) else None  # "youtube" | "creativeCommon"
+            cfg_emb = (cfg or {}).get("embeddable") if isinstance(cfg, dict) else None
+            cfg_public_stats = (cfg or {}).get("public_stats_viewable") if isinstance(cfg, dict) else None
+            cfg_default_audio_lang = (cfg or {}).get("default_audio_language") if isinstance(cfg, dict) else None
+
+            # Derivations à partir de la tâche
+            task_meta = (task.get("meta") or {}) if isinstance(task, dict) else {}
+            lang = task_meta.get("language") or cfg_lang or "fr"
+            privacy_status = (task.get("privacy_status")
+                              or task_meta.get("privacy_status")
+                              or cfg_priv or "private")
+            category_id = (task.get("category_id")
+                           or task_meta.get("category_id")
+                           or ai_generated_category
+                           or cfg_cat or 22)
+            made_for_kids = (task.get("made_for_kids")
+                             or task_meta.get("made_for_kids")
+                             or (cfg or {}).get("made_for_kids"))
+            # Forcer made_for_kids à False par défaut
+            if made_for_kids is None:
+                made_for_kids = False
+
+            # Date d'enregistrement: utiliser received_at si présent
+            recording_date = (task.get("received_at") if isinstance(task.get("received_at"), str) else None)
+
+            # Génération automatique de thumbnail
+            thumbnail_path = None
+            try:
+                thumb_output = enhanced.parent / f"{enhanced.stem}_thumb.jpg"
+                generated_thumb = get_best_thumbnail(enhanced, thumb_output)
+                if generated_thumb and generated_thumb.exists():
+                    thumbnail_path = str(generated_thumb)
+                    log.info(f"Thumbnail générée: {thumbnail_path}")
+                else:
+                    log.warning("Échec génération thumbnail automatique")
+            except Exception as e:
+                log.warning(f"Erreur génération thumbnail: {e}")
+
+            try:
+                resp = upload_video(
+                    credentials,
+                    video_path=str(enhanced),
+                    title=title,
+                    description=description,
+                    tags=tags,
+                    category_id=category_id,
+                    privacy_status=privacy_status,
+                    publish_at=(cfg or {}).get("publish_at"),
+                    thumbnail_path=thumbnail_path or (cfg or {}).get("thumbnail_path"),
+                    made_for_kids=made_for_kids,
+                    embeddable=cfg_emb if cfg_emb is not None else True,
+                    license=cfg_license or "youtube",
+                    public_stats_viewable=cfg_public_stats if cfg_public_stats is not None else True,
+                    default_language=lang,
+                    default_audio_language=cfg_default_audio_lang or lang,
+                    recording_date=recording_date,
+                )
+                vid = resp.get("id")
+                log.info("Upload réussi: video id=%s", vid)
+            except ResumableUploadError as e:
+                # Gestion spécifique uploadLimitExceeded
+                if "uploadLimitExceeded" in str(e) or "exceeded the number of videos" in str(e):
+                    log.warning(f"Limite d'upload YouTube atteinte: {e}")
+                    
+                    # Marquer la tâche comme bloquée
+                    task["status"] = "blocked"
+                    task["error"] = "uploadLimitExceeded"
+                    task["error_message"] = "Limite quotidienne YouTube atteinte. Réessayez dans 24h."
+                    task["blocked_at"] = datetime.now().isoformat()
+                    
+                    # Sauvegarder la tâche bloquée
+                    task_path.write_text(json.dumps(task, ensure_ascii=False, indent=2), encoding="utf-8")
+                    
+                    # Archiver la tâche bloquée
+                    archive_path = adir / task_path.name
+                    shutil.move(str(task_path), str(archive_path))
+                    
+                    log.info(f"Tâche marquée comme bloquée et archivée: {archive_path}")
+                    
+                    # Arrêter le traitement des autres tâches pour éviter les échecs en cascade
+                    log.warning("Arrêt du worker pour éviter d'autres échecs uploadLimitExceeded")
+                    return
+                else:
+                    # Autres erreurs ResumableUploadError
+                    raise
+            
+            task["status"] = "done"
+            task["youtube_id"] = vid
+            _save_task(task_path, task)
+
+            # Génération et upload de sous-titres (si activé)
+            subtitles_cfg = (cfg or {}).get("subtitles") if isinstance(cfg, dict) else None
+            task_subtitles_enabled = task.get("subtitles_enabled", False)
+            config_subtitles_enabled = subtitles_cfg.get("enabled", False) if subtitles_cfg else False
+            
+            # Activer si demandé dans la tâche OU dans la config
+            if task_subtitles_enabled or config_subtitles_enabled:
+                try:
+                    _process_subtitles(credentials, vid, enhanced, subtitles_cfg or {}, task)
+                except Exception as e:
+                    log.error("Erreur génération sous-titres pour %s: %s", vid, e)
+                    # Ne pas faire échouer la tâche pour les sous-titres
+                # Toujours persister les infos de sous-titres (générés/uploadés) si le task a été modifié
+                try:
+                    _save_task(task_path, task)
+                except Exception as _e:
+                    log.warning(f"Impossible de sauvegarder les infos de sous-titres: {_e}")
+
+            # Enregistrer l'utilisation du quota si multi-comptes
+            if upload_account_id:
+                try:
+                    manager.record_upload(upload_account_id, api_calls_used=1600)
+                    log.info(f"Quota enregistré pour le compte {upload_account_id}")
+                except Exception as e:
+                    log.error(f"Erreur enregistrement quota: {e}")
+
+            # Marquer comme terminée si tâche planifiée
+            if task.get("scheduled_task_id"):
+                try:
+                    scheduler.mark_task_completed(task["scheduled_task_id"])
+                except Exception as e:
+                    log.error("Erreur marquage tâche planifiée terminée: %s", e)
+
+            # Archive
+            dest = adir / task_path.name
+            shutil.move(str(task_path), str(dest))
+            
+        except Exception as e:
+            log.exception("Erreur inattendue sur %s: %s", task_path, e)
+            try:
+                task = _load_task(task_path)
+                task["status"] = "error"
+                task["error"] = str(e)
+                _save_task(task_path, task)
+            except Exception:
+                pass

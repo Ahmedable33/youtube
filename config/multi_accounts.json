@@ -1,0 +1,20 @@
+{
+  "accounts": [
+    {
+      "account_id": "main",
+      "name": "Compte Principal",
+      "channel_id": "",
+      "credentials_path": "config/credentials_main.json",
+      "token_path": "config/token_main.json",
+      "daily_quota_limit": 10000,
+      "daily_upload_limit": 6,
+      "enabled": true
+    }
+  ],
+  "chat_mappings": {},
+  "load_balancing": {
+    "strategy": "round_robin",
+    "auto_switch": true,
+    "fallback_enabled": true
+  }
+}
