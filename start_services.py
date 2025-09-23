@@ -167,6 +167,12 @@ def main():
     args = ap.parse_args()
 
     video_cfg = _read_yaml(Path(args.config))
+    # Charger la configuration des sources (pour savoir si le bot Telegram doit être lancé)
+    sources_cfg = _read_yaml(Path(args.sources))
+    tcfg = (sources_cfg or {}).get("telegram") or {}
+    t_enabled = bool(tcfg.get("enabled", False))
+    token = str(tcfg.get("token") or "").strip()
+    token_placeholder = (not token) or token in ("VOTRE_BOT_TOKEN_ICI", "YOUR_BOT_TOKEN_HERE")
 
     # 1) Démarrer Ollama si nécessaire
     spawned_ollama = start_ollama_if_needed(video_cfg)
@@ -182,9 +188,17 @@ def main():
         sch_cmd = [PYTHON, "scheduler_daemon.py", "--schedule-dir", args.schedule_dir, "--queue-dir", args.queue_dir, "--archive-dir", args.archive_dir, "--interval", "60"]
         procs.append(("scheduler", start_process(sch_cmd, "scheduler")))
 
-        # Telegram bot
-        bot_cmd = [PYTHON, "main.py", "telegram-bot", "--sources", args.sources]
-        procs.append(("telegram-bot", start_process(bot_cmd, "telegram-bot")))
+        # Telegram bot (optionnel)
+        start_telegram = False
+        if t_enabled and not token_placeholder:
+            # Lancer uniquement si activé et token valide présent
+            bot_cmd = [PYTHON, "main.py", "telegram-bot", "--sources", args.sources]
+            procs.append(("telegram-bot", start_process(bot_cmd, "telegram-bot")))
+            start_telegram = True
+        else:
+            # Informer et ignorer le lancement du bot pour éviter les boucles d'erreur
+            reason = "désactivé" if not t_enabled else "token manquant/placeholder"
+            print(f"⏭️  Telegram bot ignoré ({reason}). Modifiez {args.sources} pour l'activer.")
 
         # 3) Lancer un watcher qui déclenche le worker quand des tâches apparaissent
         stop_event = threading.Event()
@@ -203,8 +217,10 @@ def main():
         cmd_by_name = {
             "monitor": mon_cmd,
             "scheduler": sch_cmd,
-            "telegram-bot": bot_cmd,
         }
+        # Ajouter la commande du bot uniquement si démarré
+        if 'start_telegram' in locals() and start_telegram:
+            cmd_by_name["telegram-bot"] = bot_cmd
         provider = str(((video_cfg or {}).get("seo") or {}).get("provider") or "").lower()
         while True:
             time.sleep(1.0)
@@ -222,6 +238,12 @@ def main():
                                 last_restart[name] = now
                             except Exception as e:
                                 print(f"❌ Échec relance {name}: {e}")
+                    else:
+                        # Ne pas reloger en boucle les processus terminés: on les retire de la liste
+                        try:
+                            procs.pop(i)
+                        except Exception:
+                            pass
 
             # Surveiller Ollama si nous l'avons lancé et provider=ollama
             if provider == "ollama" and spawned_ollama is not None and spawned_ollama.poll() is not None:
