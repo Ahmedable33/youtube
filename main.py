@@ -6,20 +6,22 @@ import logging
 from pathlib import Path
 from typing import List, Optional
 
-from src.auth import get_credentials, DEFAULT_CLIENT_SECRETS, DEFAULT_TOKEN_FILE
 from src.config_loader import load_config, ConfigError
-from src.uploader import upload_video
 from src.ai_generator import MetaRequest, generate_metadata, write_metadata_to_config
-from src.ingest import download_source
-from src.video_enhance import enhance_video, EnhanceError
-from src.ingest_telegram import run_bot_from_sources
-from src.worker import process_queue
 
 
 SCOPES = [
     "https://www.googleapis.com/auth/youtube.upload",
 ]
 
+
+# Test-friendly aliases (monkeypatch points) – resolved lazily if None
+get_credentials = None  # type: ignore
+upload_video = None  # type: ignore
+download_source = None  # type: ignore
+enhance_video = None  # type: ignore
+run_bot_from_sources = None  # type: ignore
+process_queue = None  # type: ignore
 
 def _quality_defaults(name: Optional[str]) -> dict:
     """Retourne un dict d'options par défaut pour un préréglage de qualité.
@@ -117,8 +119,9 @@ def build_parser() -> argparse.ArgumentParser:
     up.add_argument("--made-for-kids", type=str, default=None, choices=["true", "false"], help="Contenu pour enfants")
 
     # OAuth options
-    up.add_argument("--client-secrets", type=str, default=DEFAULT_CLIENT_SECRETS, help="Chemin client_secret.json")
-    up.add_argument("--token-file", type=str, default=DEFAULT_TOKEN_FILE, help="Chemin token.json")
+    # Ne pas importer src.auth ici: utiliser des valeurs par défaut littérales
+    up.add_argument("--client-secrets", type=str, default="config/client_secret.json", help="Chemin client_secret.json")
+    up.add_argument("--token-file", type=str, default="config/token.json", help="Chemin token.json")
     up.add_argument("--headless", action="store_true", help="Flux OAuth en console (sans navigateur)")
 
     # Logging
@@ -183,7 +186,7 @@ def build_parser() -> argparse.ArgumentParser:
     up.add_argument("--enhance-output", type=str, default=None, help="Fichier de sortie pour la vidéo améliorée (par défaut <video>.enhanced.mp4)")
 
     # AI metadata generation
-    ai = sub.add_parser("ai-meta", help="Générer des métadonnées SEO (OpenAI)")
+    ai = sub.add_parser("ai-meta", help="Générer des métadonnées SEO (IA: Ollama/OpenAI)")
     ai.add_argument("--topic", type=str, required=True, help="Sujet/Thème de la vidéo")
     ai.add_argument("--language", type=str, default="fr", help="Langue (fr/en/...)")
     ai.add_argument("--tone", type=str, default="informatif", help="Ton éditorial (ex: informatif, divertissant)")
@@ -193,7 +196,8 @@ def build_parser() -> argparse.ArgumentParser:
     ai.set_defaults(include_hashtags=True)
     ai.add_argument("--max-tags", type=int, default=15, help="Nombre max de tags")
     ai.add_argument("--max-title-chars", type=int, default=70, help="Longueur max du titre")
-    ai.add_argument("--model", type=str, default="gpt-4o-mini", help="Modèle OpenAI")
+    ai.add_argument("--provider", type=str, choices=["ollama", "openai", "none"], default=None, help="Fournisseur IA (par défaut: valeur de config)")
+    ai.add_argument("--model", type=str, default=None, help="Modèle IA (ex: gpt-4o-mini ou llama3.2:3b). Par défaut: valeur de config")
     ai.add_argument("--input-text", type=str, default=None, help="Contexte facultatif (script/transcript)")
     ai.add_argument("--out-config", type=str, default=None, help="Écrire les métadonnées dans ce YAML")
     ai.add_argument("--video-path", type=str, default=None, help="Définir aussi video_path dans le YAML")
@@ -392,8 +396,18 @@ def main(argv: Optional[List[str]] = None) -> int:
                 out_path = Path(args.enhance_output)
             else:
                 out_path = vd_path.with_name(vd_path.stem + ".enhanced.mp4")
+            # Importer paresseusement pour éviter dépendances quand non utilisé
+            # Permettre override par monkeypatch via alias global
+            _enhance_video = globals().get("enhance_video")
+            if not callable(_enhance_video):
+                from src.video_enhance import enhance_video as _impl, EnhanceError
+                _enhance_video = _impl
+            else:
+                # Define EnhanceError placeholder if tests patch only function
+                class EnhanceError(Exception):
+                    pass
             try:
-                enhanced = enhance_video(
+                enhanced = _enhance_video(
                     input_path=vd_path,
                     output_path=out_path,
                     codec=codec,
@@ -422,14 +436,24 @@ def main(argv: Optional[List[str]] = None) -> int:
                 logging.error("Amélioration échouée: %s", e)
                 return 2
 
-        creds = get_credentials(
+        # Importer paresseusement auth/uploader pour éviter dépendances quand non utilisé
+        _get_credentials = globals().get("get_credentials")
+        if not callable(_get_credentials):
+            from src.auth import get_credentials as _impl
+            _get_credentials = _impl
+        _upload_video = globals().get("upload_video")
+        if not callable(_upload_video):
+            from src.uploader import upload_video as _uimpl
+            _upload_video = _uimpl
+
+        creds = _get_credentials(
             SCOPES,
             client_secrets_path=args.client_secrets,
             token_path=args.token_file,
             headless=args.headless,
         )
 
-        resp = upload_video(
+        resp = _upload_video(
             creds,
             video_path=video_path,
             title=title,
@@ -454,10 +478,13 @@ def main(argv: Optional[List[str]] = None) -> int:
             include_hashtags=args.include_hashtags,
             max_tags=args.max_tags,
             max_title_chars=args.max_title_chars,
+            provider=args.provider,
             model=args.model,
             input_text=args.input_text,
         )
-        data = generate_metadata(req)
+        # Utiliser le même fichier de config que --out-config si fourni, sinon défaut
+        cfg_path = args.out_config if args.out_config else "config/video.yaml"
+        data = generate_metadata(req, config_path=cfg_path, video_path=args.video_path)
         if args.print or not args.out_config:
             # Affiche un aperçu simple
             print("Title:\n" + data.get("title", ""))
@@ -475,7 +502,12 @@ def main(argv: Optional[List[str]] = None) -> int:
             )
             print(f"Métadonnées écrites dans {args.out_config}")
     elif args.command == "ingest":
-        path = download_source(
+        # Lazy import ingest (allow alias override)
+        _download_source = globals().get("download_source")
+        if not callable(_download_source):
+            from src.ingest import download_source as _impl
+            _download_source = _impl
+        path = _download_source(
             args.url,
             output_dir=args.output_dir,
             filename=args.filename,
@@ -483,6 +515,11 @@ def main(argv: Optional[List[str]] = None) -> int:
         )
         print(str(path))
     elif args.command == "enhance":
+        # Lazy import enhance to avoid importing at module import time (allow alias override)
+        _enhance_video2 = globals().get("enhance_video")
+        if not callable(_enhance_video2):
+            from src.video_enhance import enhance_video as _enh
+            _enhance_video2 = _enh
         base = _quality_defaults(getattr(args, "quality", None))
         def pick2(cli_val, key, default=None):
             if cli_val is not None:
@@ -512,7 +549,7 @@ def main(argv: Optional[List[str]] = None) -> int:
         contrast = pick2(args.contrast, "contrast")
         saturation = pick2(args.saturation, "saturation")
 
-        out = enhance_video(
+        out = _enhance_video2(
             input_path=args.input,
             output_path=args.output,
             codec=codec,
@@ -537,10 +574,20 @@ def main(argv: Optional[List[str]] = None) -> int:
         )
         print(str(out))
     elif args.command == "telegram-bot":
+        # Lazy import telegram bot (allow alias override)
+        _run_bot = globals().get("run_bot_from_sources")
+        if not callable(_run_bot):
+            from src.ingest_telegram import run_bot_from_sources as _impl
+            _run_bot = _impl
         logging.getLogger("httpx").setLevel(logging.WARNING)
-        run_bot_from_sources(args.sources)
+        _run_bot(args.sources)
     elif args.command == "worker":
-        process_queue(queue_dir=args.queue_dir, archive_dir=args.archive_dir, config_path=args.config, log_level=args.log_level)
+        # Lazy import worker (allow alias override)
+        _process_queue = globals().get("process_queue")
+        if not callable(_process_queue):
+            from src.worker import process_queue as _impl
+            _process_queue = _impl
+        _process_queue(queue_dir=args.queue_dir, archive_dir=args.archive_dir, config_path=args.config, log_level=args.log_level)
 
     return 0
 
