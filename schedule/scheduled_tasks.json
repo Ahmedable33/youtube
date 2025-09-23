@@ -7,5 +7,14 @@
     "created_at": "2025-09-08T17:18:21.514787",
     "attempts": 1,
     "max_attempts": 3
+  },
+  {
+    "task_id": "sched_1758643200_task_1758617554_1403131596",
+    "scheduled_time": "2025-09-23T18:00:00+02:00",
+    "original_task_path": "queue/task_1758617554_1403131596.json",
+    "status": "scheduled",
+    "created_at": "2025-09-23T10:53:03.800937",
+    "attempts": 0,
+    "max_attempts": 3
   }
 ]
