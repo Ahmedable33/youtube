@@ -11,6 +11,7 @@ from typing import Iterable, Optional
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardMarkup
 from telegram.ext import Application, CommandHandler, MessageHandler, ContextTypes, CallbackQueryHandler, filters
 from src.ai_generator import MetaRequest, generate_metadata
+import re
 
 
 log = logging.getLogger("ingest_telegram")
@@ -49,6 +50,7 @@ def _reply_menu_keyboard() -> ReplyKeyboardMarkup:
     # Clavier persistant (s'affiche en bas, ne dépend pas du message)
     rows = [
         ["Status", "Preview SEO", "Redo"],
+        ["AI: Re-générer Titre/Tags"],
         ["Quality: low", "Quality: medium", "Quality: high"],
         ["Quality: youtube", "Quality: max", "Chapters help"],
         ["Privacy: Private", "Privacy: Public", "Privacy: Unlisted"],
@@ -142,6 +144,83 @@ def _save_prefs(queue_dir: Path, chat_id: int, prefs: dict) -> None:
     p.write_text(json.dumps(prefs or {}, ensure_ascii=False, indent=2), encoding="utf-8")
 
 
+def ai_regenerate_title_tags(queue_dir: Path, chat_id: int, *, config_path: str = "config/video.yaml") -> dict:
+    """Raffiner le titre et les tags via IA pour la dernière tâche pending de ce chat.
+
+    Retourne un dict avec les champs mis à jour (meta, task_path, changed_title, changed_tags, changed_description).
+    Lève une exception en cas d'erreur.
+    """
+    taskp = _get_last_task(queue_dir, chat_id)
+    if not taskp:
+        raise RuntimeError("Aucune tâche récente trouvée. Envoyez d'abord une vidéo.")
+    data = json.loads(taskp.read_text(encoding="utf-8"))
+    if data.get("status") != "pending":
+        raise RuntimeError("Tâche non pending. Utilisez 'Redo' pour une nouvelle tâche.")
+
+    meta = data.get("meta") or {}
+    cur_title = meta.get("title")
+    cur_desc = meta.get("description")
+    video_path = data.get("video_path")
+    if not video_path:
+        raise RuntimeError("Chemin vidéo manquant dans la tâche.")
+
+    # Construire la requête IA avec le contexte utilisateur
+    req = MetaRequest(
+        topic=(cur_title or Path(video_path).stem.replace("_", " ")),  # fallback
+        language=meta.get("language") or "fr",
+        tone=meta.get("tone") or "informatif",
+        target_keywords=None,
+        channel_style=None,
+        include_hashtags=True,
+        include_category=True,
+        max_tags=15,
+        max_title_chars=70,
+        provider=None,
+        model=None,
+        input_text=((f"Titre utilisateur: {cur_title}\n\n" if cur_title else "") + (cur_desc or "")) or None,
+    )
+    ai_meta = generate_metadata(req, config_path=config_path, video_path=video_path)
+
+    # Toujours remplacer titre et tags; description seulement si absente
+    new_title = ai_meta.get("title") or cur_title or Path(video_path).stem
+    # Nettoyage du titre: retirer préfixes et guillemets
+    def _clean_title(title: str) -> str:
+        s = title.strip() if isinstance(title, str) else title
+        s = re.sub(r"^(titre\s*utilisateur\s*:\s*|title\s*:\s*)", "", s, flags=re.IGNORECASE)
+        s = s.strip()
+        for lq, rq in [("«", "»"), ("“", "”"), ('"', '"'), ("'", "'")]:
+            if s.startswith(lq) and s.endswith(rq) and len(s) >= 2:
+                s = s[1:-1].strip()
+                break
+        return s
+    new_title = _clean_title(new_title)
+    new_tags = ai_meta.get("tags") or []
+    # Normaliser tags
+    new_tags = sorted({str(t).strip().lstrip('#').lower() for t in new_tags if str(t).strip()})
+
+    changed_title = (new_title != cur_title)
+    changed_tags = (sorted(new_tags) != sorted(meta.get("tags") or []))
+
+    meta["title"] = new_title
+    if not cur_desc:
+        new_desc = ai_meta.get("description") or ""
+        changed_description = (new_desc != (cur_desc or ""))
+        meta["description"] = new_desc
+    else:
+        changed_description = False
+    meta["tags"] = new_tags
+    data["meta"] = meta
+    taskp.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+
+    return {
+        "meta": meta,
+        "task_path": str(taskp),
+        "changed_title": changed_title,
+        "changed_tags": changed_tags,
+        "changed_description": changed_description,
+    }
+
+
 async def _handle_video(update: Update, context: ContextTypes.DEFAULT_TYPE, cfg: TelegramConfig) -> None:
     msg = update.message
     if not msg:
@@ -185,6 +264,16 @@ async def _handle_video(update: Update, context: ContextTypes.DEFAULT_TYPE, cfg:
     # Créer tâche dans la queue
     caption = (msg.caption or "").strip()
     initial_tags = _extract_hashtags(caption) if caption else []
+    # Extraire un éventuel titre/description depuis la légende
+    title_from_caption: Optional[str] = None
+    desc_from_caption: Optional[str] = None
+    if caption:
+        lines = [l.strip() for l in caption.splitlines() if l.strip()]
+        if len(lines) == 1:
+            title_from_caption = lines[0]
+        elif len(lines) > 1:
+            title_from_caption = lines[0]
+            desc_from_caption = "\n".join(lines[1:]).strip() or None
     # Préférences par chat (ex: quality)
     prefs = _load_prefs(cfg.queue_dir, chat_id)
     task = {
@@ -199,8 +288,10 @@ async def _handle_video(update: Update, context: ContextTypes.DEFAULT_TYPE, cfg:
         "meta": {
             "language": "fr",
             "tone": "informatif",
-            "title": None,
-            "description": caption or None,
+            # Titre: priorité à la légende (première ligne), sinon nom de fichier sans extension
+            "title": title_from_caption or _safe_filename(orig_stem).replace("_", " "),
+            # Description: reste de la légende si présent
+            "description": desc_from_caption,
             "tags": initial_tags,
         },
     }
@@ -360,6 +451,22 @@ def build_application(cfg: TelegramConfig) -> Application:
             return
         if txt == "Redo":
             await _cmd_redo(update, context)
+            return
+        if txt == "AI: Re-générer Titre/Tags":
+            chat_id = msg.chat_id
+            try:
+                res = ai_regenerate_title_tags(cfg.queue_dir, chat_id, config_path="config/video.yaml")
+                meta = res.get("meta") or {}
+                cur_desc = meta.get("description")
+                await msg.reply_text(
+                    "✅ Métadonnées IA mises à jour.\n\n" +
+                    f"Titre:\n{meta.get('title','')}\n\n" +
+                    (f"Description (inchangée):\n{cur_desc}\n\n" if cur_desc else f"Description (IA):\n{meta.get('description','')}\n\n") +
+                    f"Tags: {', '.join(meta.get('tags') or [])}"
+                )
+            except Exception as e:
+                log.exception("Erreur raffinage IA: %s", e)
+                await msg.reply_text(f"❌ Erreur IA: {e}")
             return
         if txt == "Cancel":
             await _cmd_cancel(update, context)

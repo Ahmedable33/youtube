@@ -4,25 +4,22 @@ import json
 import logging
 import shutil
 from datetime import datetime
+import re
 from pathlib import Path
 from typing import Optional
 
 from src.config_loader import load_config, ConfigError
 from src.video_enhance import enhance_video, EnhanceError
 from src.ai_generator import MetaRequest, generate_metadata
-from src.uploader import upload_video
 from src.scheduler import UploadScheduler
-from src.auth import get_credentials, DEFAULT_CLIENT_SECRETS, DEFAULT_TOKEN_FILE
 from src.subtitle_generator import (
     is_whisper_available,
     detect_language,
     generate_subtitles,
 )
-from src.youtube_captions import smart_upload_captions
 from .thumbnail_generator import get_best_thumbnail
 from .multi_account_manager import create_multi_account_manager
 
-from googleapiclient.errors import ResumableUploadError
 
 
 log = logging.getLogger("worker")
@@ -31,6 +28,16 @@ SCOPES = [
     "https://www.googleapis.com/auth/youtube.upload",
     "https://www.googleapis.com/auth/youtube.force-ssl",
 ]
+
+# Test-friendly aliases and defaults (avoid import-time heavy deps)
+upload_video = None  # type: ignore
+get_credentials = None  # type: ignore
+DEFAULT_CLIENT_SECRETS = "config/client_secret.json"
+DEFAULT_TOKEN_FILE = "config/token.json"
+smart_upload_captions = None  # type: ignore
+
+# Alias modulaire patchable par les tests
+smart_upload_captions = None  # type: ignore
 
 
 def _quality_defaults(name: Optional[str]) -> dict:
@@ -81,6 +88,25 @@ def _quality_defaults(name: Optional[str]) -> dict:
     }
     return presets.get(q, {})
 
+
+def _clean_title(title: str) -> str:
+    """Nettoie le titre: supprime les préfixes et guillemets superflus.
+    - Retire les préfixes comme 'Titre utilisateur:' ou 'Title:' (case-insensitive)
+    - Retire les guillemets et guillemets français entourant tout le titre
+    """
+    if not isinstance(title, str):
+        return title
+    s = title.strip()
+    # Retirer préfixes
+    s = re.sub(r"^(titre\s*utilisateur\s*:\s*|title\s*:\s*)", "", s, flags=re.IGNORECASE)
+    s = s.strip()
+    # Retirer guillemets paires
+    pairs = [("«", "»"), ("“", "”"), ('"', '"'), ("'", "'")]
+    for lq, rq in pairs:
+        if s.startswith(lq) and s.endswith(rq) and len(s) >= 2:
+            s = s[1:-1].strip()
+            break
+    return s
 
 def _read_tasks(queue_dir: Path) -> list[Path]:
     # Inclure les tâches normales et celles issues du scheduler
@@ -202,7 +228,12 @@ def _process_subtitles(creds, video_id: str, video_path: Path, subtitles_cfg: di
         # Upload vers YouTube si demandé
         if upload_youtube and subtitle_files:
             try:
-                results = smart_upload_captions(
+                # Utiliser la fonction patchée si disponible, sinon importer paresseusement
+                _fn = globals().get("smart_upload_captions")
+                if not callable(_fn):
+                    from src.youtube_captions import smart_upload_captions as _impl
+                    _fn = _impl
+                results = _fn(
                     credentials=creds,
                     video_id=video_id,
                     subtitle_files=subtitle_files,
@@ -426,10 +457,14 @@ def process_queue(*, queue_dir: str | Path, archive_dir: str | Path, config_path
                 except Exception:
                     pass
 
-                need_ai = force_ai_title or (not title or not description or not tags)
+                # Règle spéciale Telegram: toujours affiner le titre et les tags à l'aide de l'IA,
+                # même s'ils existent déjà, pour les rendre plus percutants.
+                is_telegram = (task.get("source") == "telegram")
+                need_ai = is_telegram or force_ai_title or (not title or not description or not tags)
                 if need_ai:
                     req = MetaRequest(
-                        topic=_default_title_for(video_path),
+                        # Si un titre existe, l'utiliser comme topic de base; sinon fallback sur le nom de fichier
+                        topic=(title or _default_title_for(video_path)),
                         language=((cfg or {}).get("language") or "fr"),
                         tone=((cfg or {}).get("tone") or "informatif"),
                         target_keywords=None,
@@ -439,20 +474,37 @@ def process_queue(*, queue_dir: str | Path, archive_dir: str | Path, config_path
                         max_tags=15,
                         max_title_chars=70,
                         provider=seo_provider,
-                        model=seo_model or "llama3.1:8b",
-                        host=seo_host,
-                        input_text=description or None,
+                        # Ne définir model/host que pour Ollama. Pour OpenAI, laisser None pour que
+                        # src.ai_generator choisisse OPENAI_MODEL ou sa valeur par défaut.
+                        model=(seo_model if ((seo_provider or "").lower() == "ollama") else None),
+                        host=(seo_host if ((seo_provider or "").lower() == "ollama") else None),
+                        # Contexte: inclure titre + description s'ils existent pour guider la réécriture
+                        input_text=((f"Titre utilisateur: {title}\n\n" if title else "") + (description or "")) or None,
                     )
-                    ai_meta = generate_metadata(req, video_path=str(video_path))
+                    ai_meta = generate_metadata(
+                        req,
+                        config_path=str(config_path) if config_path else "config/video.yaml",
+                        video_path=str(video_path),
+                    )
 
-                    # Titre: toujours remplacer si force_ai_title, sinon seulement s'il manque
-                    if force_ai_title or not title:
-                        title = ai_meta.get("title") or _default_title_for(video_path)
-                    # Description/Tags: compléter seulement si manquants
-                    if not description:
-                        description = ai_meta.get("description") or ""
-                    if not tags:
+                    # Si la tâche vient de Telegram: toujours remplacer titre et tags avec la version IA
+                    if is_telegram:
+                        title = ai_meta.get("title") or (title or _default_title_for(video_path))
+                        title = _clean_title(title)
                         tags = ai_meta.get("tags") or []
+                        # Ne pas écraser la description utilisateur si elle existe; compléter seulement si absente
+                        if not description:
+                            description = ai_meta.get("description") or ""
+                    else:
+                        # Cas standard: Titre: remplacer si force_ai_title, sinon seulement s'il manque
+                        if force_ai_title or not title:
+                            title = ai_meta.get("title") or _default_title_for(video_path)
+                            title = _clean_title(title)
+                        # Description/Tags: compléter seulement si manquants
+                        if not description:
+                            description = ai_meta.get("description") or ""
+                        if not tags:
+                            tags = ai_meta.get("tags") or []
                     # Stocker la catégorie générée automatiquement pour usage ultérieur
                     ai_generated_category = ai_meta.get("category_id")
                 else:
@@ -516,7 +568,11 @@ def process_queue(*, queue_dir: str | Path, archive_dir: str | Path, config_path
                     upload_account_id = account.account_id
                 else:
                     # Mode single compte classique
-                    credentials = get_credentials(
+                    _get_credentials = globals().get("get_credentials")
+                    if not callable(_get_credentials):
+                        from src.auth import get_credentials as _impl
+                        _get_credentials = _impl
+                    credentials = _get_credentials(
                         SCOPES,
                         client_secrets_path=DEFAULT_CLIENT_SECRETS,
                         token_path=DEFAULT_TOKEN_FILE
@@ -570,7 +626,11 @@ def process_queue(*, queue_dir: str | Path, archive_dir: str | Path, config_path
                 log.warning(f"Erreur génération thumbnail: {e}")
 
             try:
-                resp = upload_video(
+                _upload_video = globals().get("upload_video")
+                if not callable(_upload_video):
+                    from src.uploader import upload_video as _impl
+                    _upload_video = _impl
+                resp = _upload_video(
                     credentials,
                     video_path=str(enhanced),
                     title=title,
@@ -590,8 +650,8 @@ def process_queue(*, queue_dir: str | Path, archive_dir: str | Path, config_path
                 )
                 vid = resp.get("id")
                 log.info("Upload réussi: video id=%s", vid)
-            except ResumableUploadError as e:
-                # Gestion spécifique uploadLimitExceeded
+            except Exception as e:
+                # Gestion spécifique uploadLimitExceeded (sans dépendre du type exact)
                 if "uploadLimitExceeded" in str(e) or "exceeded the number of videos" in str(e):
                     log.warning(f"Limite d'upload YouTube atteinte: {e}")
                     
@@ -614,7 +674,7 @@ def process_queue(*, queue_dir: str | Path, archive_dir: str | Path, config_path
                     log.warning("Arrêt du worker pour éviter d'autres échecs uploadLimitExceeded")
                     return
                 else:
-                    # Autres erreurs ResumableUploadError
+                    # Autres erreurs d'upload
                     raise
             
             task["status"] = "done"
