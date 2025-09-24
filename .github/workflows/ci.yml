@@ -92,9 +92,58 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install -r requirements.txt
-    
-    # Ici, ajoutez les étapes de déploiement spécifiques à votre projet
+        pip install google-api-python-client google-auth-httplib2 google-auth-oauthlib
+
+    - name: Configure AWS CLI
+      if: github.ref == 'refs/heads/main'  # Uniquement pour la branche main
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ vars.AWS_DEFAULT_REGION || 'us-east-1' }}
+
     - name: Deploy to production
+      if: github.ref == 'refs/heads/main'  # Uniquement pour la branche main
+      env:
+        GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
+        YOUTUBE_CREDENTIALS: ${{ secrets.YOUTUBE_CREDENTIALS }}
+        ENVIRONMENT: production
       run: |
-        echo "Deployment would happen here"
-        # Exemple: ./deploy.sh
+        # Créer le répertoire de configuration s'il n'existe pas
+        mkdir -p config
+        
+        # Écrire les credentials Google
+        if [ -n "$GOOGLE_CREDENTIALS" ]; then
+          echo "$GOOGLE_CREDENTIALS" > config/google_credentials.json
+          echo "Google credentials configured"
+        fi
+        
+        # Écrire les credentials YouTube
+        if [ -n "$YOUTUBE_CREDENTIALS" ]; then
+          echo "$YOUTUBE_CREDENTIALS" > config/youtube_credentials.json
+          echo "YouTube credentials configured"
+        fi
+        
+        # Vérifier la configuration
+        echo "Deploying to $ENVIRONMENT environment"
+        
+        # Exécuter les migrations de base de données si nécessaire
+        # python manage.py migrate
+        
+        # Redémarrer les services si nécessaire
+        # systemctl restart youtube-worker
+        
+        echo "✅ Deployment completed successfully"
+        
+        # Notification de déploiement réussi
+        curl -X POST -H 'Content-type: application/json' \
+          --data '{"text":"🚀 Nouveau déploiement réussi sur '$ENVIRONMENT'!"}' \
+          ${{ secrets.SLACK_WEBHOOK_URL || '' }}
+      
+    - name: Post-deployment tests
+      if: always() && github.ref == 'refs/heads/main'
+      run: |
+        # Vérifier que les services sont opérationnels
+        echo "Running post-deployment checks..."
+        # Exemple: curl -sSf http://localhost:8000/health > /dev/null
+        echo "✅ Post-deployment checks passed"

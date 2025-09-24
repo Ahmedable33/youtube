@@ -17,8 +17,16 @@ config/client_secret.json
 config/token.json
 config/token_*.json
 config/sources.yaml
+config/google_credentials.json
+config/youtube_credentials.json
 client_secret.json
 token.json
+
+# Environment variables
+.env
+*.env.local
+*.env.*.local
+!.env.example
 
 # Logs
 logs/
