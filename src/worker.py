@@ -4,15 +4,14 @@ import json
 import logging
 import shutil
 from datetime import datetime
+import re
 from pathlib import Path
 from typing import Optional
 
 from src.config_loader import load_config, ConfigError
 from src.video_enhance import enhance_video, EnhanceError
 from src.ai_generator import MetaRequest, generate_metadata
-from src.uploader import upload_video
 from src.scheduler import UploadScheduler
-from src.auth import get_credentials, DEFAULT_CLIENT_SECRETS, DEFAULT_TOKEN_FILE
 from src.subtitle_generator import (
     is_whisper_available,
     detect_language,
@@ -29,6 +28,13 @@ SCOPES = [
     "https://www.googleapis.com/auth/youtube.upload",
     "https://www.googleapis.com/auth/youtube.force-ssl",
 ]
+
+# Test-friendly aliases and defaults (avoid import-time heavy deps)
+upload_video = None  # type: ignore
+get_credentials = None  # type: ignore
+DEFAULT_CLIENT_SECRETS = "config/client_secret.json"
+DEFAULT_TOKEN_FILE = "config/token.json"
+smart_upload_captions = None  # type: ignore
 
 # Alias modulaire patchable par les tests
 smart_upload_captions = None  # type: ignore
@@ -82,6 +88,25 @@ def _quality_defaults(name: Optional[str]) -> dict:
     }
     return presets.get(q, {})
 
+
+def _clean_title(title: str) -> str:
+    """Nettoie le titre: supprime les préfixes et guillemets superflus.
+    - Retire les préfixes comme 'Titre utilisateur:' ou 'Title:' (case-insensitive)
+    - Retire les guillemets et guillemets français entourant tout le titre
+    """
+    if not isinstance(title, str):
+        return title
+    s = title.strip()
+    # Retirer préfixes
+    s = re.sub(r"^(titre\s*utilisateur\s*:\s*|title\s*:\s*)", "", s, flags=re.IGNORECASE)
+    s = s.strip()
+    # Retirer guillemets paires
+    pairs = [("«", "»"), ("“", "”"), ('"', '"'), ("'", "'")]
+    for lq, rq in pairs:
+        if s.startswith(lq) and s.endswith(rq) and len(s) >= 2:
+            s = s[1:-1].strip()
+            break
+    return s
 
 def _read_tasks(queue_dir: Path) -> list[Path]:
     # Inclure les tâches normales et celles issues du scheduler
@@ -465,6 +490,7 @@ def process_queue(*, queue_dir: str | Path, archive_dir: str | Path, config_path
                     # Si la tâche vient de Telegram: toujours remplacer titre et tags avec la version IA
                     if is_telegram:
                         title = ai_meta.get("title") or (title or _default_title_for(video_path))
+                        title = _clean_title(title)
                         tags = ai_meta.get("tags") or []
                         # Ne pas écraser la description utilisateur si elle existe; compléter seulement si absente
                         if not description:
@@ -473,6 +499,7 @@ def process_queue(*, queue_dir: str | Path, archive_dir: str | Path, config_path
                         # Cas standard: Titre: remplacer si force_ai_title, sinon seulement s'il manque
                         if force_ai_title or not title:
                             title = ai_meta.get("title") or _default_title_for(video_path)
+                            title = _clean_title(title)
                         # Description/Tags: compléter seulement si manquants
                         if not description:
                             description = ai_meta.get("description") or ""
@@ -541,7 +568,11 @@ def process_queue(*, queue_dir: str | Path, archive_dir: str | Path, config_path
                     upload_account_id = account.account_id
                 else:
                     # Mode single compte classique
-                    credentials = get_credentials(
+                    _get_credentials = globals().get("get_credentials")
+                    if not callable(_get_credentials):
+                        from src.auth import get_credentials as _impl
+                        _get_credentials = _impl
+                    credentials = _get_credentials(
                         SCOPES,
                         client_secrets_path=DEFAULT_CLIENT_SECRETS,
                         token_path=DEFAULT_TOKEN_FILE
@@ -595,7 +626,11 @@ def process_queue(*, queue_dir: str | Path, archive_dir: str | Path, config_path
                 log.warning(f"Erreur génération thumbnail: {e}")
 
             try:
-                resp = upload_video(
+                _upload_video = globals().get("upload_video")
+                if not callable(_upload_video):
+                    from src.uploader import upload_video as _impl
+                    _upload_video = _impl
+                resp = _upload_video(
                     credentials,
                     video_path=str(enhanced),
                     title=title,

@@ -200,7 +200,21 @@ class UploadScheduler:
             try:
                 with open(self.schedule_file, 'r', encoding='utf-8') as f:
                     data = json.load(f)
-                    self.scheduled_tasks = [ScheduledTask.from_dict(task) for task in data]
+                    raw_tasks = [ScheduledTask.from_dict(task) for task in data]
+                    # Normaliser les datetimes en timezone-aware
+                    norm: List[ScheduledTask] = []
+                    for t in raw_tasks:
+                        if t.scheduled_time.tzinfo is None:
+                            t.scheduled_time = self.timezone.localize(t.scheduled_time)
+                        else:
+                            t.scheduled_time = t.scheduled_time.astimezone(self.timezone)
+                        if t.created_at is not None:
+                            if t.created_at.tzinfo is None:
+                                t.created_at = self.timezone.localize(t.created_at)
+                            else:
+                                t.created_at = t.created_at.astimezone(self.timezone)
+                        norm.append(t)
+                    self.scheduled_tasks = norm
             except Exception as e:
                 log.error(f"Erreur chargement tâches planifiées: {e}")
     
@@ -306,7 +320,8 @@ class UploadScheduler:
         scheduled_task = ScheduledTask(
             task_id=task_id,
             scheduled_time=scheduled_time,
-            original_task_path=task_path
+            original_task_path=task_path,
+            created_at=datetime.now(self.timezone)
         )
         
         self.scheduled_tasks.append(scheduled_task)
@@ -383,7 +398,11 @@ class UploadScheduler:
         """Reprogrammer une tâche"""
         for task in self.scheduled_tasks:
             if task.task_id == task_id and task.status in [ScheduleStatus.SCHEDULED, ScheduleStatus.READY]:
-                task.scheduled_time = new_time
+                # Normaliser new_time en timezone-aware locale
+                if new_time.tzinfo is None:
+                    task.scheduled_time = self.timezone.localize(new_time)
+                else:
+                    task.scheduled_time = new_time.astimezone(self.timezone)
                 task.status = ScheduleStatus.SCHEDULED
                 self.save_scheduled_tasks()
                 log.info(f"Tâche reprogrammée: {task_id} pour {new_time}")
