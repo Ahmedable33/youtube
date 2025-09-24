@@ -15,6 +15,7 @@ __pycache__/
 # Auth secrets and tokens
 config/client_secret.json
 config/token.json
+config/token_*.json
 config/sources.yaml
 client_secret.json
 token.json
