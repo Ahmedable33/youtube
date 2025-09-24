@@ -10,17 +10,33 @@ Ce document explique comment configurer et exécuter le déploiement de l'applic
 
 ## Configuration des Secrets
 
-### 1. Secrets GitHub
+### 1. Configuration des Secrets GitHub
 
-Ajoutez les secrets suivants dans les paramètres de votre dépôt GitHub (`Settings` > `Secrets and variables` > `Actions`):
+#### Secrets Requis
 
-| Nom du secret | Description | Exemple |
-|--------------|-------------|---------|
-| `GOOGLE_CREDENTIALS` | Fichier JSON des credentials Google Cloud | `{"type": "service_account", ...}` |
-| `YOUTUBE_CREDENTIALS` | Fichier JSON OAuth 2.0 pour l'API YouTube | `{"installed": {"client_id":...}}` |
-| `AWS_ACCESS_KEY_ID` | Clé d'accès AWS | `AKIA...` |
-| `AWS_SECRET_ACCESS_KEY` | Clé secrète AWS | `wJalrXUtnFEMI/K7...` |
-| `SLACK_WEBHOOK_URL` | (Optionnel) URL du webhook Slack pour les notifications | `https://hooks.slack.com/...` |
+| Nom du secret | Description | Où le trouver |
+|--------------|-------------|----------------|
+| `GOOGLE_CREDENTIALS` | Fichier JSON des credentials Google Cloud | Google Cloud Console > IAM > Comptes de service > Clés
+| `YOUTUBE_CREDENTIALS` | Fichier JSON OAuth 2.0 pour l'API YouTube | Google API Console > Identifiants
+| `AWS_ACCESS_KEY_ID` | Clé d'accès AWS | AWS IAM Console > Utilisateurs > Sécurité
+| `AWS_SECRET_ACCESS_KEY` | Clé secrète AWS | Même endroit que la clé d'accès
+| `CODECOV_TOKEN` | Token pour les rapports de couverture | Codecov.io > Settings
+| `SLACK_WEBHOOK_URL` | (Optionnel) URL du webhook Slack | Slack > Administration > Gérer les applications > Incoming Webhooks
+
+#### Comment ajouter un secret :
+1. Allez dans les paramètres de votre dépôt GitHub
+2. Cliquez sur "Secrets and variables" > "Actions"
+3. Cliquez sur "New repository secret"
+4. Entrez le nom du secret et sa valeur
+5. Cliquez sur "Add secret"
+
+#### Variables d'environnement recommandées
+
+| Variable | Valeur par défaut | Description |
+|----------|-------------------|-------------|
+| `AWS_DEFAULT_REGION` | `us-east-1` | Région AWS par défaut |
+| `ENVIRONMENT` | `development` | Environnement d'exécution |
+| `LOG_LEVEL` | `INFO` | Niveau de journalisation |
 
 ### 2. Variables d'environnement
 
