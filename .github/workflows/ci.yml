@@ -57,10 +57,10 @@ jobs:
         PYTHONPATH: ${{ github.workspace }}
 
     - name: Upload coverage to Codecov
-      if: secrets.CODECOV_TOKEN != ''
+      if: ${{ !cancelled() }}
       uses: codecov/codecov-action@v4
       with:
-        token: ${{ secrets.CODECOV_TOKEN }}
+        token: ${{ secrets.CODECOV_TOKEN || '' }}
         file: ./coverage.xml
         fail_ci_if_error: false
       continue-on-error: true
@@ -97,19 +97,19 @@ jobs:
         pip install google-api-python-client google-auth-httplib2 google-auth-oauthlib
 
     - name: Configure AWS CLI
-      if: github.ref == 'refs/heads/main' && secrets.AWS_ACCESS_KEY_ID != ''
+      if: github.ref == 'refs/heads/main'
       uses: aws-actions/configure-aws-credentials@v4
       with:
-        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID || '' }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY || '' }}
         aws-region: ${{ vars.AWS_DEFAULT_REGION || 'us-east-1' }}
       continue-on-error: true
 
     - name: Deploy to production
-      if: github.ref == 'refs/heads/main' && secrets.GOOGLE_CREDENTIALS != '' && secrets.YOUTUBE_CREDENTIALS != ''
+      if: github.ref == 'refs/heads/main'
       env:
-        GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
-        YOUTUBE_CREDENTIALS: ${{ secrets.YOUTUBE_CREDENTIALS }}
+        GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS || '' }}
+        YOUTUBE_CREDENTIALS: ${{ secrets.YOUTUBE_CREDENTIALS || '' }}
         ENVIRONMENT: production
       continue-on-error: true
       run: |
@@ -140,10 +140,10 @@ jobs:
         echo "✅ Deployment completed successfully"
         
         # Notification de déploiement réussi (si configuré)
-        if [ -n "${{ secrets.SLACK_WEBHOOK_URL }}" ]; then
+        if [ -n "$SLACK_WEBHOOK_URL" ] && [ "$SLACK_WEBHOOK_URL" != "" ]; then
           curl -X POST -H 'Content-type: application/json' \
             --data '{"text":"🚀 Nouveau déploiement réussi sur '$ENVIRONMENT'!"}' \
-            ${{ secrets.SLACK_WEBHOOK_URL }}
+            "$SLACK_WEBHOOK_URL" || echo "Échec de l'envoi de la notification Slack"
         else
           echo "Aucune URL Slack configurée, notification ignorée"
         fi
