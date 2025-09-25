@@ -1,6 +1,6 @@
-# Description
+## Description
 
-Veuillez décrire les changements apportés et le contexte. Liez les issues si applicable.
+Décrivez brièvement le but de la PR, le contexte et les changements principaux. Liez des issues si applicables.
 
 Fixes #
 
@@ -12,13 +12,13 @@ Fixes #
 - [ ] Test
 - [ ] Chore
 
-## Checklist
-- [ ] Les tests passent en CI (job "Run Tests")
-- [ ] Les nouvelles fonctionnalités sont couvertes par des tests
-- [ ] Le code respecte `black`, `flake8` et `mypy`
-- [ ] La documentation est à jour (README/DEPLOYMENT/BRANCH_STRATEGY)
-- [ ] Pas de secrets/credentials dans le code ou l'historique
-- [ ] Prêt pour revue
+## Qualité (obligatoire)
+- [ ] Tests unitaires passent en local
+- [ ] CI verte (workflow `CI / tests`)
+- [ ] Linter OK (`flake8`) et formatage conforme
+- [ ] Documentation/README mise à jour si nécessaire
+- [ ] Description claire et taille raisonnable
+- [ ] Reviewer/Assignee assigné(e)
 
 ## Screenshots (si UI)
 
