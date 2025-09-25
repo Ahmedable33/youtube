@@ -9,7 +9,10 @@ branch_protection_rules:
     required_status_checks:
       strict: true  # Nécessite que la branche soit à jour avant la fusion
       contexts:
-        - test  # Le job de test doit passer
+        - CI / tests
+        - PR Quality / checks
+        - CodeQL / Analyze (CodeQL)
+        - Code scanning results / CodeQL
     required_pull_request_reviews:
       required_approving_review_count: 0  # Au moins une approbation
       dismiss_stale_reviews: true  # Annule les approbations si de nouveaux commits sont poussés
