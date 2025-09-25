@@ -1,0 +1,9 @@
+# CODEOWNERS
+# Learn more: https://docs.github.com/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+# Default owner(s) for everything in the repo
+* @Ahmedable33
+
+# Optional: enforce reviews for sensitive areas
+# tests/ @Ahmedable33
+# src/ @Ahmedable33
