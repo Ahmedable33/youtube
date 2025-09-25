@@ -9,8 +9,8 @@ ga = types.ModuleType("googleapiclient")
 ga_discovery = types.ModuleType("googleapiclient.discovery")
 ga_errors = types.ModuleType("googleapiclient.errors")
 ga_http = types.ModuleType("googleapiclient.http")
- 
- 
+
+
 def _stub_build(*args, **kwargs):
     class _Svc:
         pass

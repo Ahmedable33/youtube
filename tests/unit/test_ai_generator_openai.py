@@ -1,7 +1,6 @@
 import json
 import types
 
-import pytest
 import yaml
 
 import src.ai_generator as ai_gen
