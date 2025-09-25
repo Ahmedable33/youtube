@@ -61,7 +61,7 @@ jobs:
             "required_status_checks": {
               "strict": PLACEHOLDER_STRICT,
               "checks": [
-                { "context": "tests" }
+                { "context": "CI / tests" }
               ]
             },
             "enforce_admins": true,
@@ -76,7 +76,7 @@ jobs:
             "allow_deletions": false,
             "block_creations": false
           }
-JSON
+          JSON
 
           # Replace placeholders safely
           sed -i "s/PLACEHOLDER_STRICT/$STRICT/g" body.json
