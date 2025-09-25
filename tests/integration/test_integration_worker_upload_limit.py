@@ -10,6 +10,7 @@ def test_worker_blocks_on_upload_limit(monkeypatch, tmp_path: Path):
     ga_discovery = types.ModuleType("googleapiclient.discovery")
     ga_errors = types.ModuleType("googleapiclient.errors")
     ga_http = types.ModuleType("googleapiclient.http")
+    
     class _StubResumableUploadError(Exception):
         pass
     ga_errors.ResumableUploadError = _StubResumableUploadError
@@ -19,11 +20,13 @@ def test_worker_blocks_on_upload_limit(monkeypatch, tmp_path: Path):
             super().__init__(*args)
     ga_errors.HttpError = _StubHttpError
     # Provide required attributes used by src.uploader import
+
     def _stub_build(*args, **kwargs):
         class _Svc:
             pass
         return _Svc()
     ga_discovery.build = _stub_build
+
     class _StubMediaFileUpload:
         def __init__(self, *args, **kwargs):
             pass
@@ -76,6 +79,7 @@ def test_worker_blocks_on_upload_limit(monkeypatch, tmp_path: Path):
     monkeypatch.setattr(worker, "get_best_thumbnail", lambda *a, **k: None)
     monkeypatch.setattr(worker, "smart_upload_captions", lambda *a, **k: {})
     # Replace the exception class inside worker to a simple one we can raise easily
+
     class _DummyResumable(Exception):
         pass
     monkeypatch.setattr(worker, "ResumableUploadError", _DummyResumable, raising=False)
