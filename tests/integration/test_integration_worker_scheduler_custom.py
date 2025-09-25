@@ -86,6 +86,7 @@ def test_worker_custom_future_schedules(monkeypatch, tmp_path: Path):
     # Spy on schedule_task
     called = {}
     orig_schedule_task = UploadScheduler.schedule_task
+    
     def spy_schedule(self, task_path_arg, scheduled_time=None, preferred_days=None):
         called["task_path"] = str(task_path_arg)
         called["scheduled_time"] = scheduled_time
@@ -195,7 +196,9 @@ def test_worker_processes_scheduled_task_marks_completed(monkeypatch, tmp_path: 
     queue_dir = tmp_path / "queue"
     archive_dir = tmp_path / "queue_archive"
     schedule_dir = tmp_path / "schedule"
-    queue_dir.mkdir(); archive_dir.mkdir(); schedule_dir.mkdir()
+    queue_dir.mkdir()
+    archive_dir.mkdir()
+    schedule_dir.mkdir()
 
     video = tmp_path / "video.mp4"
     video.write_bytes(b"\x00\x00fakevideo")
@@ -217,7 +220,7 @@ def test_worker_processes_scheduled_task_marks_completed(monkeypatch, tmp_path: 
 
     # Spy mark_task_completed
     called = {}
-    
+
     def spy_mark_completed(self, task_id: str):
         called["task_id"] = task_id
         return True
