@@ -75,6 +75,7 @@ def test_ai_meta_prints(monkeypatch, capsys, tmp_path: Path):
     assert "Tags:" in out and "t1" in out
 
 
+
 def test_ai_meta_writes_out_config(monkeypatch, tmp_path: Path):
     def fake_generate(req, config_path: str = "config/video.yaml", video_path=None):
         return {
