@@ -59,6 +59,7 @@ def test_worker_auto_schedules_not_upload(monkeypatch, tmp_path: Path):
     # Spy on UploadScheduler.schedule_task
     scheduled = {}
     orig_schedule_task = UploadScheduler.schedule_task
+
     def spy_schedule(self, task_path_arg, scheduled_time=None, preferred_days=None):
         scheduled["called_with"] = str(task_path_arg)
         return orig_schedule_task(self, task_path_arg, scheduled_time, preferred_days)

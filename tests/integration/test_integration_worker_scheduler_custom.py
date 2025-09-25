@@ -86,7 +86,7 @@ def test_worker_custom_future_schedules(monkeypatch, tmp_path: Path):
     # Spy on schedule_task
     called = {}
     orig_schedule_task = UploadScheduler.schedule_task
-    
+
     def spy_schedule(self, task_path_arg, scheduled_time=None, preferred_days=None):
         called["task_path"] = str(task_path_arg)
         called["scheduled_time"] = scheduled_time

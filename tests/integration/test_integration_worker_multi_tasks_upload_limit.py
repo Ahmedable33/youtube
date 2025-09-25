@@ -10,19 +10,23 @@ def test_worker_multi_tasks_stops_on_upload_limit(monkeypatch, tmp_path: Path):
     ga_discovery = types.ModuleType("googleapiclient.discovery")
     ga_errors = types.ModuleType("googleapiclient.errors")
     ga_http = types.ModuleType("googleapiclient.http")
+    
     class _StubResumableUploadError(Exception):
         pass
     ga_errors.ResumableUploadError = _StubResumableUploadError
+    
     class _StubHttpError(Exception):
         def __init__(self, *args, **kwargs):
             self.resp = types.SimpleNamespace(status=403)
             super().__init__(*args)
     ga_errors.HttpError = _StubHttpError
+    
     def _stub_build(*args, **kwargs):
         class _Svc:
             pass
         return _Svc()
     ga_discovery.build = _stub_build
+    
     class _StubMediaFileUpload:
         def __init__(self, *args, **kwargs):
             pass
@@ -85,6 +89,7 @@ def test_worker_multi_tasks_stops_on_upload_limit(monkeypatch, tmp_path: Path):
     monkeypatch.setattr(worker, "ResumableUploadError", _DummyResumable, raising=False)
 
     calls = {"count": 0}
+    
     def upload_side_effect(*args, **kwargs):
         calls["count"] += 1
         if calls["count"] == 1:
