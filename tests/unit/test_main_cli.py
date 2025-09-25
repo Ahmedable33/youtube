@@ -14,10 +14,16 @@ def _stub_build(*args, **kwargs):
     class _Svc:
         pass
     return _Svc()
+
+
 class _StubHttpError(Exception):
     pass
+
+
 class _StubResumableUploadError(Exception):
     pass
+
+
 class _StubMediaFileUpload:
     def __init__(self, *args, **kwargs):
         pass
@@ -32,12 +38,16 @@ sys.modules['googleapiclient.http'] = ga_http
 
 # Stub telegram ingest to avoid dependency at import time
 stub_ingest_tg = types.ModuleType('src.ingest_telegram')
+
+
 def _stub_run_bot_from_sources(*args, **kwargs):
     return None
+
+
 stub_ingest_tg.run_bot_from_sources = _stub_run_bot_from_sources
 sys.modules['src.ingest_telegram'] = stub_ingest_tg
 
-import main as cli
+import main as cli  # noqa: E402
 
 
 def test_ai_meta_prints(monkeypatch, capsys, tmp_path: Path):
