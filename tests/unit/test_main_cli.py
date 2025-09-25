@@ -1,5 +1,4 @@
 from pathlib import Path
-import io
 import sys
 import types
 
@@ -10,6 +9,8 @@ ga = types.ModuleType("googleapiclient")
 ga_discovery = types.ModuleType("googleapiclient.discovery")
 ga_errors = types.ModuleType("googleapiclient.errors")
 ga_http = types.ModuleType("googleapiclient.http")
+ 
+ 
 def _stub_build(*args, **kwargs):
     class _Svc:
         pass
@@ -27,6 +28,8 @@ class _StubResumableUploadError(Exception):
 class _StubMediaFileUpload:
     def __init__(self, *args, **kwargs):
         pass
+
+
 ga_discovery.build = _stub_build
 ga_errors.HttpError = _StubHttpError
 ga_errors.ResumableUploadError = _StubResumableUploadError
@@ -73,7 +76,6 @@ def test_ai_meta_prints(monkeypatch, capsys, tmp_path: Path):
     out = capsys.readouterr().out
     assert "Title:" in out and "Titre Test" in out
     assert "Tags:" in out and "t1" in out
-
 
 
 def test_ai_meta_writes_out_config(monkeypatch, tmp_path: Path):
