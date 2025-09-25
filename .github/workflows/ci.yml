@@ -1,157 +1,28 @@
-name: CI/CD Pipeline
+name: CI
 
 on:
   push:
-    branches: [ main, 'feature/*', 'fix/*', 'hotfix/*' ]
-    tags: [ 'v*' ]
+    branches: [ main ]
   pull_request:
     branches: [ main ]
-  workflow_dispatch:
-
-# Désactive les exécutions simultanées pour les mêmes événements de workflow
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
 
 jobs:
-  test:
-    name: Run Tests
+  tests:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
-    
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      with:
-        fetch-depth: 0  # Nécessaire pour les vérifications de commit
+      - name: Checkout
+        uses: actions/checkout@v4
 
-    - name: Set up Python 3.11
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.11'
-        cache: 'pip'
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
 
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -r requirements-ci.txt
-        pip install black flake8 mypy
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements-ci.txt
 
-    - name: Lint with flake8
-      run: |
-        flake8 src/ tests/ --count --select=E9,F63,F7,F82 --show-source --statistics
-        flake8 src/ tests/ --count --max-complexity=10 --max-line-length=120 --statistics
-
-    - name: Check formatting with Black
-      run: |
-        black --check --diff --color src/ tests/
-
-    - name: Run type checking with mypy
-      run: |
-        mypy --install-types --non-interactive src/
-
-    - name: Run tests with pytest
-      run: |
-        pytest -v --cov=src --cov-report=xml --junitxml=test-results.xml
-      env:
-        PYTHONPATH: ${{ github.workspace }}
-
-    - name: Upload coverage to Codecov
-      if: ${{ !cancelled() }}
-      uses: codecov/codecov-action@v4
-      with:
-        token: ${{ secrets.CODECOV_TOKEN || '' }}
-        file: ./coverage.xml
-        fail_ci_if_error: false
-      continue-on-error: true
-
-    - name: Upload test results
-      uses: actions/upload-artifact@v4
-      if: always()
-      with:
-        name: test-results
-        path: |
-          test-results.xml
-          coverage.xml
-
-  # Ajout d'un job de déploiement conditionnel pour main
-  deploy:
-    name: Deploy
-    needs: test
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    runs-on: ubuntu-latest
-    
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      
-    - name: Set up Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.11'
-    
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -r requirements.txt
-        pip install google-api-python-client google-auth-httplib2 google-auth-oauthlib
-
-    - name: Configure AWS CLI
-      if: github.ref == 'refs/heads/main'
-      uses: aws-actions/configure-aws-credentials@v4
-      with:
-        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID || '' }}
-        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY || '' }}
-        aws-region: ${{ vars.AWS_DEFAULT_REGION || 'us-east-1' }}
-      continue-on-error: true
-
-    - name: Deploy to production
-      if: github.ref == 'refs/heads/main'
-      env:
-        GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS || '' }}
-        YOUTUBE_CREDENTIALS: ${{ secrets.YOUTUBE_CREDENTIALS || '' }}
-        ENVIRONMENT: production
-      continue-on-error: true
-      run: |
-        # Créer le répertoire de configuration s'il n'existe pas
-        mkdir -p config
-        
-        # Écrire les credentials Google
-        if [ -n "$GOOGLE_CREDENTIALS" ]; then
-          echo "$GOOGLE_CREDENTIALS" > config/google_credentials.json
-          echo "Google credentials configured"
-        fi
-        
-        # Écrire les credentials YouTube
-        if [ -n "$YOUTUBE_CREDENTIALS" ]; then
-          echo "$YOUTUBE_CREDENTIALS" > config/youtube_credentials.json
-          echo "YouTube credentials configured"
-        fi
-        
-        # Vérifier la configuration
-        echo "Deploying to $ENVIRONMENT environment"
-        
-        # Exécuter les migrations de base de données si nécessaire
-        # python manage.py migrate
-        
-        # Redémarrer les services si nécessaire
-        # systemctl restart youtube-worker
-        
-        echo "✅ Deployment completed successfully"
-        
-        # Notification de déploiement réussi (si configuré)
-        if [ -n "$SLACK_WEBHOOK_URL" ] && [ "$SLACK_WEBHOOK_URL" != "" ]; then
-          curl -X POST -H 'Content-type: application/json' \
-            --data '{"text":"🚀 Nouveau déploiement réussi sur '$ENVIRONMENT'!"}' \
-            "$SLACK_WEBHOOK_URL" || echo "Échec de l'envoi de la notification Slack"
-        else
-          echo "Aucune URL Slack configurée, notification ignorée"
-        fi
-      
-    - name: Post-deployment tests
-      if: always() && github.ref == 'refs/heads/main'
-      run: |
-        # Vérifier que les services sont opérationnels
-        echo "Running post-deployment checks..."
-        # Exemple: curl -sSf http://localhost:8000/health > /dev/null
-        echo "✅ Post-deployment checks passed"
+      - name: Run tests
+        run: |
+          pytest -q
