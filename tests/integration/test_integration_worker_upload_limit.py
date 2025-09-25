@@ -10,10 +10,11 @@ def test_worker_blocks_on_upload_limit(monkeypatch, tmp_path: Path):
     ga_discovery = types.ModuleType("googleapiclient.discovery")
     ga_errors = types.ModuleType("googleapiclient.errors")
     ga_http = types.ModuleType("googleapiclient.http")
-    
+
     class _StubResumableUploadError(Exception):
         pass
     ga_errors.ResumableUploadError = _StubResumableUploadError
+
     class _StubHttpError(Exception):
         def __init__(self, *args, **kwargs):
             self.resp = types.SimpleNamespace(status=403)

@@ -58,7 +58,9 @@ def test_worker_custom_future_schedules(monkeypatch, tmp_path: Path):
     queue_dir = tmp_path / "queue"
     archive_dir = tmp_path / "queue_archive"
     schedule_dir = tmp_path / "schedule"
-    queue_dir.mkdir(); archive_dir.mkdir(); schedule_dir.mkdir()
+    queue_dir.mkdir()
+    archive_dir.mkdir()
+    schedule_dir.mkdir()
 
     video = tmp_path / "video.mp4"
     video.write_bytes(b"\x00\x00fakevideo")
@@ -130,7 +132,8 @@ def test_worker_custom_past_processes_immediately(monkeypatch, tmp_path: Path):
 
     queue_dir = tmp_path / "queue"
     archive_dir = tmp_path / "queue_archive"
-    queue_dir.mkdir(); archive_dir.mkdir()
+    queue_dir.mkdir()
+    archive_dir.mkdir()
 
     video = tmp_path / "video.mp4"
     video.write_bytes(b"\x00\x00fakevideo")
@@ -214,6 +217,7 @@ def test_worker_processes_scheduled_task_marks_completed(monkeypatch, tmp_path: 
 
     # Spy mark_task_completed
     called = {}
+    
     def spy_mark_completed(self, task_id: str):
         called["task_id"] = task_id
         return True
