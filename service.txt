@@ -20,3 +20,28 @@ ollama serve
 
 
  python start_services.py --sources config/sources.yaml --config config/video.yaml --queue-dir queue --archive-dir queue_archive --schedule-dir schedule --monitor-host 127.0.0.1 --monitor-port 8000 --log-level INFO
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ # récupérer tout depuis le remote
+git fetch origin
+
+# mettre à jour main local
+git checkout main
+git pull --ff-only origin main    # ou `git pull --rebase` si tu préfères
+
+# créer la branche à partir de main à jour
+git checkout -b feature/ma-tache

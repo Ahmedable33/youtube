@@ -1,0 +1,66 @@
+name: PR Quality
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened, ready_for_review]
+
+jobs:
+  checks:
+    name: checks
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+      contents: read
+    env:
+      MIN_DESCRIPTION_LEN: "20"
+      MAX_CHANGED_FILES: "60"
+      MAX_TOTAL_CHANGES: "1500"  # additions + deletions
+      ALLOW_OVERRIDE_LABEL: "skip-pr-size-check"
+    steps:
+      - name: Validate PR metadata and size
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const pr = context.payload.pull_request;
+            if (!pr) {
+              core.setFailed('No pull_request payload found.');
+              return;
+            }
+
+            const number = pr.number;
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+
+            // Fetch fresh PR to ensure we have additions/deletions/changed_files
+            const { data } = await github.rest.pulls.get({ owner, repo, pull_number: number });
+
+            const description = (data.body || '').trim();
+            const descOk = description.length >= parseInt(process.env.MIN_DESCRIPTION_LEN, 10);
+
+            const hasAssignee = (data.assignees && data.assignees.length > 0);
+            const hasReviewer = (data.requested_reviewers && data.requested_reviewers.length > 0);
+
+            const overrideLabel = process.env.ALLOW_OVERRIDE_LABEL;
+            const labels = (data.labels || []).map(l => (typeof l === 'string' ? l : l.name));
+            const hasOverride = labels.includes(overrideLabel);
+
+            const changedFiles = data.changed_files || 0;
+            const additions = data.additions || 0;
+            const deletions = data.deletions || 0;
+            const totalChanges = additions + deletions;
+
+            const filesOk = hasOverride || changedFiles <= parseInt(process.env.MAX_CHANGED_FILES, 10);
+            const changesOk = hasOverride || totalChanges <= parseInt(process.env.MAX_TOTAL_CHANGES, 10);
+
+            const problems = [];
+            if (!descOk) problems.push(`Description trop courte (>= ${process.env.MIN_DESCRIPTION_LEN} caractères requis).`);
+            if (!hasAssignee && !hasReviewer) problems.push('Aucun reviewer/assignee assigné.');
+            if (!filesOk) problems.push(`PR trop volumineuse: ${changedFiles} fichiers modifiés (max ${process.env.MAX_CHANGED_FILES}). Ajoutez le label '${overrideLabel}' pour forcer si nécessaire.`);
+            if (!changesOk) problems.push(`Trop de changements: ${totalChanges} (additions+deletions, max ${process.env.MAX_TOTAL_CHANGES}). Ajoutez le label '${overrideLabel}' pour forcer si nécessaire.`);
+
+            if (problems.length > 0) {
+              core.setFailed('Contrôles PR échoués:\n- ' + problems.join('\n- '));
+            } else {
+              core.info('PR quality checks passed.');
+            }

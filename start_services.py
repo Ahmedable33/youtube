@@ -25,7 +25,6 @@ Arrêt: Ctrl+C (tous les sous-processus seront arrêtés proprement si possible)
 from __future__ import annotations
 
 import argparse
-import json
 import os
 import signal
 import subprocess
@@ -118,14 +117,25 @@ def start_process(cmd: List[str], name: str) -> subprocess.Popen:
 
 
 def run_worker_once(queue_dir: str, archive_dir: str, config_path: Optional[str], log_level: str) -> int:
-    cmd = [PYTHON, "main.py", "worker", "--queue-dir", queue_dir, "--archive-dir", archive_dir, "--log-level", log_level]
+    cmd = [
+        PYTHON, "main.py", "worker",
+        "--queue-dir", queue_dir,
+        "--archive-dir", archive_dir,
+        "--log-level", log_level,
+    ]
     if config_path:
         cmd.extend(["--config", config_path])
     print("⚙️  Démarrage worker (one-shot)…")
     return subprocess.call(cmd, cwd=str(PROJECT_ROOT))
 
 
-def queue_watcher(queue_dir: str, archive_dir: str, config_path: Optional[str], log_level: str, stop_event: threading.Event):
+def queue_watcher(
+    queue_dir: str,
+    archive_dir: str,
+    config_path: Optional[str],
+    log_level: str,
+    stop_event: threading.Event,
+):
     """Surveille queue_dir et lance le worker dès qu'une tâche apparaît.
     Évite de lancer plusieurs workers en parallèle.
     """
@@ -157,13 +167,35 @@ def main():
     ap.add_argument("--schedule-dir", default="schedule", help="Répertoire des tâches planifiées")
     ap.add_argument("--monitor-host", default="127.0.0.1", help="Host du monitor web")
     ap.add_argument("--monitor-port", type=int, default=8000, help="Port du monitor web")
-    ap.add_argument("--log-level", default="INFO", choices=["DEBUG", "INFO", "WARNING", "ERROR"], help="Niveau de logs du worker")
+    ap.add_argument(
+        "--log-level",
+        default="INFO",
+        choices=["DEBUG", "INFO", "WARNING", "ERROR"],
+        help="Niveau de logs du worker",
+    )
     # Auto-restart activé par défaut; possibilité de désactiver via --no-auto-restart
-    ap.add_argument("--auto-restart", dest="auto_restart", action="store_true", default=True,
-                    help="Relancer automatiquement les services (monitor/scheduler/bot/ollama) s'ils s'arrêtent (activé par défaut)")
-    ap.add_argument("--no-auto-restart", dest="auto_restart", action="store_false",
-                    help="Désactiver le redémarrage automatique des services")
-    ap.add_argument("--restart-backoff", type=float, default=3.0, help="Délai minimal (s) entre deux relances d'un même service")
+    ap.add_argument(
+        "--auto-restart",
+        dest="auto_restart",
+        action="store_true",
+        default=True,
+        help=(
+            "Relancer automatiquement les services (monitor/scheduler/bot/ollama) "
+            "s'ils s'arrêtent (activé par défaut)"
+        ),
+    )
+    ap.add_argument(
+        "--no-auto-restart",
+        dest="auto_restart",
+        action="store_false",
+        help="Désactiver le redémarrage automatique des services",
+    )
+    ap.add_argument(
+        "--restart-backoff",
+        type=float,
+        default=3.0,
+        help="Délai minimal (s) entre deux relances d'un même service",
+    )
     args = ap.parse_args()
 
     video_cfg = _read_yaml(Path(args.config))
@@ -181,11 +213,23 @@ def main():
     procs: list[tuple[str, subprocess.Popen]] = []
     try:
         # Web monitor
-        mon_cmd = [PYTHON, "monitor.py", "--host", args.monitor_host, "--port", str(args.monitor_port), "--queue-dir", args.queue_dir, "--archive-dir", args.archive_dir]
+        mon_cmd = [
+            PYTHON, "monitor.py",
+            "--host", args.monitor_host,
+            "--port", str(args.monitor_port),
+            "--queue-dir", args.queue_dir,
+            "--archive-dir", args.archive_dir,
+        ]
         procs.append(("monitor", start_process(mon_cmd, "monitor")))
 
         # Scheduler daemon
-        sch_cmd = [PYTHON, "scheduler_daemon.py", "--schedule-dir", args.schedule_dir, "--queue-dir", args.queue_dir, "--archive-dir", args.archive_dir, "--interval", "60"]
+        sch_cmd = [
+            PYTHON, "scheduler_daemon.py",
+            "--schedule-dir", args.schedule_dir,
+            "--queue-dir", args.queue_dir,
+            "--archive-dir", args.archive_dir,
+            "--interval", "60",
+        ]
         procs.append(("scheduler", start_process(sch_cmd, "scheduler")))
 
         # Telegram bot (optionnel)
