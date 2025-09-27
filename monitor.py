@@ -16,10 +16,20 @@ from src.web_monitor import run_server  # noqa: E402
 
 def main():
     parser = argparse.ArgumentParser(description="YouTube Automation Web Monitor")
-    parser.add_argument("--host", default="127.0.0.1", help="Host à écouter (défaut: 127.0.0.1)")
-    parser.add_argument("--port", type=int, default=8000, help="Port à écouter (défaut: 8000)")
-    parser.add_argument("--queue-dir", default="./queue", help="Répertoire des tâches en attente")
-    parser.add_argument("--archive-dir", default="./queue_archive", help="Répertoire des tâches archivées")
+    parser.add_argument(
+        "--host", default="127.0.0.1", help="Host à écouter (défaut: 127.0.0.1)"
+    )
+    parser.add_argument(
+        "--port", type=int, default=8000, help="Port à écouter (défaut: 8000)"
+    )
+    parser.add_argument(
+        "--queue-dir", default="./queue", help="Répertoire des tâches en attente"
+    )
+    parser.add_argument(
+        "--archive-dir",
+        default="./queue_archive",
+        help="Répertoire des tâches archivées",
+    )
 
     args = parser.parse_args()
     # Créer les répertoires s'ils n'existent pas
