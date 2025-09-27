@@ -59,6 +59,7 @@ def _is_ollama_up(host: str) -> bool:
     try:
         import http.client
         from urllib.parse import urlparse
+
         u = urlparse(host)
         netloc = u.netloc or u.path  # supporte host sans schéma
         scheme = u.scheme or "http"
@@ -77,6 +78,7 @@ def _is_ollama_up(host: str) -> bool:
 
 def _which(cmd: str) -> Optional[str]:
     from shutil import which
+
     return which(cmd)
 
 
@@ -85,14 +87,18 @@ def start_ollama_if_needed(video_cfg: dict) -> Optional[subprocess.Popen]:
     provider = str(seo.get("provider") or "").lower()
     if provider != "ollama":
         return None
-    host = str(seo.get("host") or os.environ.get("OLLAMA_HOST") or "http://localhost:11434")
+    host = str(
+        seo.get("host") or os.environ.get("OLLAMA_HOST") or "http://localhost:11434"
+    )
 
     if _is_ollama_up(host):
         print(f"✅ Ollama déjà disponible sur {host}")
         return None
 
     if not _which("ollama"):
-        print("⚠️  'ollama' introuvable dans le PATH. Installez Ollama ou ajustez la config SEO.")
+        print(
+            "⚠️  'ollama' introuvable dans le PATH. Installez Ollama ou ajustez la config SEO."
+        )
         return None
 
     print("🚀 Démarrage d'Ollama (ollama serve)…")
@@ -116,12 +122,19 @@ def start_process(cmd: List[str], name: str) -> subprocess.Popen:
     return subprocess.Popen(cmd, cwd=str(PROJECT_ROOT))
 
 
-def run_worker_once(queue_dir: str, archive_dir: str, config_path: Optional[str], log_level: str) -> int:
+def run_worker_once(
+    queue_dir: str, archive_dir: str, config_path: Optional[str], log_level: str
+) -> int:
     cmd = [
-        PYTHON, "main.py", "worker",
-        "--queue-dir", queue_dir,
-        "--archive-dir", archive_dir,
-        "--log-level", log_level,
+        PYTHON,
+        "main.py",
+        "worker",
+        "--queue-dir",
+        queue_dir,
+        "--archive-dir",
+        archive_dir,
+        "--log-level",
+        log_level,
     ]
     if config_path:
         cmd.extend(["--config", config_path])
@@ -159,14 +172,30 @@ def queue_watcher(
 
 
 def main():
-    ap = argparse.ArgumentParser(description="Lance tous les services et déclenche le worker à la création de tâche")
-    ap.add_argument("--sources", default="config/sources.yaml", help="Chemin sources.yaml pour le bot Telegram")
-    ap.add_argument("--config", default="config/video.yaml", help="Chemin video.yaml pour le worker")
-    ap.add_argument("--queue-dir", default="queue", help="Répertoire des tâches en attente")
-    ap.add_argument("--archive-dir", default="queue_archive", help="Répertoire d'archives")
-    ap.add_argument("--schedule-dir", default="schedule", help="Répertoire des tâches planifiées")
+    ap = argparse.ArgumentParser(
+        description="Lance tous les services et déclenche le worker à la création de tâche"
+    )
+    ap.add_argument(
+        "--sources",
+        default="config/sources.yaml",
+        help="Chemin sources.yaml pour le bot Telegram",
+    )
+    ap.add_argument(
+        "--config", default="config/video.yaml", help="Chemin video.yaml pour le worker"
+    )
+    ap.add_argument(
+        "--queue-dir", default="queue", help="Répertoire des tâches en attente"
+    )
+    ap.add_argument(
+        "--archive-dir", default="queue_archive", help="Répertoire d'archives"
+    )
+    ap.add_argument(
+        "--schedule-dir", default="schedule", help="Répertoire des tâches planifiées"
+    )
     ap.add_argument("--monitor-host", default="127.0.0.1", help="Host du monitor web")
-    ap.add_argument("--monitor-port", type=int, default=8000, help="Port du monitor web")
+    ap.add_argument(
+        "--monitor-port", type=int, default=8000, help="Port du monitor web"
+    )
     ap.add_argument(
         "--log-level",
         default="INFO",
@@ -204,7 +233,10 @@ def main():
     tcfg = (sources_cfg or {}).get("telegram") or {}
     t_enabled = bool(tcfg.get("enabled", False))
     token = str(tcfg.get("token") or "").strip()
-    token_placeholder = (not token) or token in ("VOTRE_BOT_TOKEN_ICI", "YOUR_BOT_TOKEN_HERE")
+    token_placeholder = (not token) or token in (
+        "VOTRE_BOT_TOKEN_ICI",
+        "YOUR_BOT_TOKEN_HERE",
+    )
 
     # 1) Démarrer Ollama si nécessaire
     spawned_ollama = start_ollama_if_needed(video_cfg)
@@ -214,21 +246,31 @@ def main():
     try:
         # Web monitor
         mon_cmd = [
-            PYTHON, "monitor.py",
-            "--host", args.monitor_host,
-            "--port", str(args.monitor_port),
-            "--queue-dir", args.queue_dir,
-            "--archive-dir", args.archive_dir,
+            PYTHON,
+            "monitor.py",
+            "--host",
+            args.monitor_host,
+            "--port",
+            str(args.monitor_port),
+            "--queue-dir",
+            args.queue_dir,
+            "--archive-dir",
+            args.archive_dir,
         ]
         procs.append(("monitor", start_process(mon_cmd, "monitor")))
 
         # Scheduler daemon
         sch_cmd = [
-            PYTHON, "scheduler_daemon.py",
-            "--schedule-dir", args.schedule_dir,
-            "--queue-dir", args.queue_dir,
-            "--archive-dir", args.archive_dir,
-            "--interval", "60",
+            PYTHON,
+            "scheduler_daemon.py",
+            "--schedule-dir",
+            args.schedule_dir,
+            "--queue-dir",
+            args.queue_dir,
+            "--archive-dir",
+            args.archive_dir,
+            "--interval",
+            "60",
         ]
         procs.append(("scheduler", start_process(sch_cmd, "scheduler")))
 
@@ -242,13 +284,21 @@ def main():
         else:
             # Informer et ignorer le lancement du bot pour éviter les boucles d'erreur
             reason = "désactivé" if not t_enabled else "token manquant/placeholder"
-            print(f"⏭️  Telegram bot ignoré ({reason}). Modifiez {args.sources} pour l'activer.")
+            print(
+                f"⏭️  Telegram bot ignoré ({reason}). Modifiez {args.sources} pour l'activer."
+            )
 
         # 3) Lancer un watcher qui déclenche le worker quand des tâches apparaissent
         stop_event = threading.Event()
         t = threading.Thread(
             target=queue_watcher,
-            args=(args.queue_dir, args.archive_dir, args.config, args.log_level, stop_event),
+            args=(
+                args.queue_dir,
+                args.archive_dir,
+                args.config,
+                args.log_level,
+                stop_event,
+            ),
             name="queue-watcher",
             daemon=True,
         )
@@ -263,9 +313,11 @@ def main():
             "scheduler": sch_cmd,
         }
         # Ajouter la commande du bot uniquement si démarré
-        if 'start_telegram' in locals() and start_telegram:
+        if "start_telegram" in locals() and start_telegram:
             cmd_by_name["telegram-bot"] = bot_cmd
-        provider = str(((video_cfg or {}).get("seo") or {}).get("provider") or "").lower()
+        provider = str(
+            ((video_cfg or {}).get("seo") or {}).get("provider") or ""
+        ).lower()
         while True:
             time.sleep(1.0)
             # Surveiller les sous-processus et relancer si demandé
@@ -274,7 +326,9 @@ def main():
                     print(f"⚠️  Processus {name} terminé avec code {p.returncode}")
                     if args.auto_restart and name in cmd_by_name:
                         now = time.time()
-                        if now - last_restart.get(name, 0.0) >= float(args.restart_backoff):
+                        if now - last_restart.get(name, 0.0) >= float(
+                            args.restart_backoff
+                        ):
                             try:
                                 print(f"🔁 Relance {name}…")
                                 new_p = start_process(cmd_by_name[name], name)
@@ -290,11 +344,17 @@ def main():
                             pass
 
             # Surveiller Ollama si nous l'avons lancé et provider=ollama
-            if provider == "ollama" and spawned_ollama is not None and spawned_ollama.poll() is not None:
+            if (
+                provider == "ollama"
+                and spawned_ollama is not None
+                and spawned_ollama.poll() is not None
+            ):
                 print("⚠️  Ollama s'est arrêté.")
                 if args.auto_restart:
                     now = time.time()
-                    if now - last_restart.get("ollama", 0.0) >= float(args.restart_backoff):
+                    if now - last_restart.get("ollama", 0.0) >= float(
+                        args.restart_backoff
+                    ):
                         print("🔁 Relance Ollama…")
                         spawned_ollama = start_ollama_if_needed(video_cfg)
                         last_restart["ollama"] = now

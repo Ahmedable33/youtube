@@ -371,30 +371,30 @@ body {
     .container {
         padding: 15px;
     }
-    
+
     .header {
         flex-direction: column;
         gap: 15px;
         text-align: center;
     }
-    
+
     .header h1 {
         font-size: 1.5rem;
     }
-    
+
     .stats-grid {
         grid-template-columns: 1fr;
     }
-    
+
     .task-header {
         flex-direction: column;
         gap: 10px;
     }
-    
+
     .task-actions {
         justify-content: center;
     }
-    
+
     .modal-content {
         margin: 25% auto;
         padding: 20px;

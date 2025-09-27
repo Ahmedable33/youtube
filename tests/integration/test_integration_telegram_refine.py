@@ -15,12 +15,14 @@ def _stub_google_clients():
 
     class _StubResumableUploadError(Exception):
         pass
+
     ga_errors.ResumableUploadError = _StubResumableUploadError
 
     class _StubHttpError(Exception):
         def __init__(self, *args, **kwargs):
             self.resp = types.SimpleNamespace(status=400)
             super().__init__(*args)
+
     ga_errors.HttpError = _StubHttpError
 
     def _stub_build(*args, **kwargs):
@@ -31,20 +33,25 @@ def _stub_google_clients():
                         class _Insert:
                             def execute(self):
                                 return {"id": "test_video_id"}
+
                         return _Insert()
+
                 return _Videos()
+
         return _Svc()
+
     ga_discovery.build = _stub_build
 
     class _StubMediaFileUpload:
         def __init__(self, *args, **kwargs):
             pass
+
     ga_http.MediaFileUpload = _StubMediaFileUpload
 
-    sys.modules['googleapiclient'] = ga
-    sys.modules['googleapiclient.discovery'] = ga_discovery
-    sys.modules['googleapiclient.errors'] = ga_errors
-    sys.modules['googleapiclient.http'] = ga_http
+    sys.modules["googleapiclient"] = ga
+    sys.modules["googleapiclient.discovery"] = ga_discovery
+    sys.modules["googleapiclient.errors"] = ga_errors
+    sys.modules["googleapiclient.http"] = ga_http
 
 
 @pytest.fixture(autouse=True)
@@ -64,14 +71,16 @@ def _run_worker_with_task(tmp_path: Path, task: dict, ai_meta: dict):
             "host": "http://127.0.0.1:11434",
             "fast_mode": False,
             "num_predict": 200,
-            "force_title_from_description": False
+            "force_title_from_description": False,
         },
         "enhance": {"enabled": False},
         "multi_accounts": {"enabled": False},
     }
     cfg_path = tmp_path / "video.yaml"
     raw = {"video_path": str(tmp_path / "test.mp4"), **cfg}
-    cfg_path.write_text(yaml.safe_dump(raw, allow_unicode=True, sort_keys=False), encoding="utf-8")
+    cfg_path.write_text(
+        yaml.safe_dump(raw, allow_unicode=True, sort_keys=False), encoding="utf-8"
+    )
 
     # Prepare queue and archive
     queue_dir = tmp_path / "queue"
@@ -88,15 +97,19 @@ def _run_worker_with_task(tmp_path: Path, task: dict, ai_meta: dict):
 
     # Import worker and monkeypatch
     from src import worker
+
     # Monkeypatch AI and YouTube upload
     worker_generate_called = {"count": 0}
 
     def fake_gen(req, **kwargs):
         worker_generate_called["count"] += 1
         return ai_meta
+
     def fake_creds(*a, **k):
         return object()
+
     captured_upload = {"kwargs": None}
+
     def fake_upload(creds, video_path, **kwargs):
         captured_upload["kwargs"] = kwargs
         return {"id": "uploaded_video_id"}
@@ -109,7 +122,12 @@ def _run_worker_with_task(tmp_path: Path, task: dict, ai_meta: dict):
     worker.upload_video = fake_upload
 
     # Run
-    worker.process_queue(queue_dir=str(queue_dir), archive_dir=str(archive_dir), config_path=str(cfg_path), log_level="WARNING")
+    worker.process_queue(
+        queue_dir=str(queue_dir),
+        archive_dir=str(archive_dir),
+        config_path=str(cfg_path),
+        log_level="WARNING",
+    )
 
     # Return archived task and captured call
     archived = archive_dir / task_path.name
@@ -126,13 +144,13 @@ def test_refine_title_and_tags_when_title_only(tmp_path: Path):
         "meta": {
             "title": "Mon titre original",
             "description": None,
-            "tags": ["ancien", "tag"]
-        }
+            "tags": ["ancien", "tag"],
+        },
     }
     ai_meta = {
         "title": "Titre percutant IA",
         "description": "Description générée par IA",
-        "tags": ["nouveau", "tags", "seo"]
+        "tags": ["nouveau", "tags", "seo"],
     }
     data, upload_kwargs, calls = _run_worker_with_task(tmp_path, task, ai_meta)
 
@@ -156,13 +174,13 @@ def test_refine_title_and_tags_when_title_and_description(tmp_path: Path):
         "meta": {
             "title": "Titre fourni",
             "description": "Desc utilisateur à conserver",
-            "tags": ["anciens", "mots"]
-        }
+            "tags": ["anciens", "mots"],
+        },
     }
     ai_meta = {
         "title": "Titre IA plus accrocheur",
         "description": "Description IA (ne doit pas remplacer)",
-        "tags": ["visibilite", "clics"]
+        "tags": ["visibilite", "clics"],
     }
     data, upload_kwargs, calls = _run_worker_with_task(tmp_path, task, ai_meta)
 

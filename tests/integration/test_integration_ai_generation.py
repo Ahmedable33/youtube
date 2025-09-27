@@ -3,7 +3,6 @@ import sys
 import types
 from pathlib import Path
 
-import pytest
 import yaml
 
 
@@ -14,7 +13,7 @@ def test_worker_openai_ai_generation(monkeypatch, tmp_path: Path):
         "title": "Titre Généré par IA",
         "description": "Description complète générée par IA avec mots-clés optimisés.",
         "tags": ["ai", "generation", "youtube", "seo"],
-        "hashtags": ["#ai", "#youtube"]
+        "hashtags": ["#ai", "#youtube"],
     }
 
     # (Plus besoin de stubs OpenAI ici)
@@ -27,6 +26,7 @@ def test_worker_openai_ai_generation(monkeypatch, tmp_path: Path):
 
     class _StubResumableUploadError(Exception):
         pass
+
     ga_errors.ResumableUploadError = _StubResumableUploadError
 
     class _StubHttpError(Exception):
@@ -34,6 +34,7 @@ def test_worker_openai_ai_generation(monkeypatch, tmp_path: Path):
             # Mimic attribute access in some code paths
             self.resp = types.SimpleNamespace(status=400)
             super().__init__(*args)
+
     ga_errors.HttpError = _StubHttpError
 
     def _stub_build(*args, **kwargs):
@@ -44,20 +45,25 @@ def test_worker_openai_ai_generation(monkeypatch, tmp_path: Path):
                         class _Insert:
                             def execute(self):
                                 return {"id": "test_video_id"}
+
                         return _Insert()
+
                 return _Videos()
+
         return _Svc()
+
     ga_discovery.build = _stub_build
 
     class _StubMediaFileUpload:
         def __init__(self, *args, **kwargs):
             pass
+
     ga_http.MediaFileUpload = _StubMediaFileUpload
 
-    sys.modules['googleapiclient'] = ga
-    sys.modules['googleapiclient.discovery'] = ga_discovery
-    sys.modules['googleapiclient.errors'] = ga_errors
-    sys.modules['googleapiclient.http'] = ga_http
+    sys.modules["googleapiclient"] = ga
+    sys.modules["googleapiclient.discovery"] = ga_discovery
+    sys.modules["googleapiclient.errors"] = ga_errors
+    sys.modules["googleapiclient.http"] = ga_http
 
     # Importer worker après stubs
     from src import worker
@@ -70,6 +76,7 @@ def test_worker_openai_ai_generation(monkeypatch, tmp_path: Path):
 
     def fake_upload(creds, video_path, **kwargs):
         return {"id": "uploaded_video_id"}
+
     monkeypatch.setattr(worker, "upload_video", fake_upload)
 
     # Config avec SEO provider=ollama
@@ -81,7 +88,7 @@ def test_worker_openai_ai_generation(monkeypatch, tmp_path: Path):
             "model": "llama3.2:3b",
             "host": "http://127.0.0.1:11434",
             "fast_mode": True,
-            "force_title_from_description": False
+            "force_title_from_description": False,
         },
         "enhance": {"enabled": False},  # Skip enhance
         "multi_accounts": {"enabled": False},
@@ -91,7 +98,9 @@ def test_worker_openai_ai_generation(monkeypatch, tmp_path: Path):
         "video_path": str(tmp_path / "test.mp4"),
         **cfg,
     }
-    cfg_path.write_text(yaml.safe_dump(raw, allow_unicode=True, sort_keys=False), encoding="utf-8")
+    cfg_path.write_text(
+        yaml.safe_dump(raw, allow_unicode=True, sort_keys=False), encoding="utf-8"
+    )
 
     # Task avec titre/description manquants -> IA forcée
     task = {

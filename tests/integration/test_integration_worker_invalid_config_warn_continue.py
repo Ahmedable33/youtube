@@ -10,27 +10,36 @@ def test_worker_warns_and_continues_on_invalid_config(monkeypatch, tmp_path: Pat
     ga_discovery = types.ModuleType("googleapiclient.discovery")
     ga_errors = types.ModuleType("googleapiclient.errors")
     ga_http = types.ModuleType("googleapiclient.http")
+
     class _StubResumableUploadError(Exception):
         pass
+
     ga_errors.ResumableUploadError = _StubResumableUploadError
+
     class _StubHttpError(Exception):
         def __init__(self, *args, **kwargs):
             self.resp = types.SimpleNamespace(status=403)
             super().__init__(*args)
+
     ga_errors.HttpError = _StubHttpError
+
     def _stub_build(*args, **kwargs):
         class _Svc:
             pass
+
         return _Svc()
+
     ga_discovery.build = _stub_build
+
     class _StubMediaFileUpload:
         def __init__(self, *args, **kwargs):
             pass
+
     ga_http.MediaFileUpload = _StubMediaFileUpload
-    sys.modules['googleapiclient'] = ga
-    sys.modules['googleapiclient.discovery'] = ga_discovery
-    sys.modules['googleapiclient.errors'] = ga_errors
-    sys.modules['googleapiclient.http'] = ga_http
+    sys.modules["googleapiclient"] = ga
+    sys.modules["googleapiclient.discovery"] = ga_discovery
+    sys.modules["googleapiclient.errors"] = ga_errors
+    sys.modules["googleapiclient.http"] = ga_http
 
     from src import worker
 
@@ -60,7 +69,9 @@ def test_worker_warns_and_continues_on_invalid_config(monkeypatch, tmp_path: Pat
 
     # Stubs to avoid external effects
     monkeypatch.setattr(worker, "get_credentials", lambda *a, **k: object())
-    monkeypatch.setattr(worker, "upload_video", lambda *a, **k: {"id": "vid_invalid_cfg"})
+    monkeypatch.setattr(
+        worker, "upload_video", lambda *a, **k: {"id": "vid_invalid_cfg"}
+    )
     monkeypatch.setattr(worker, "get_best_thumbnail", lambda *a, **k: None)
     monkeypatch.setattr(worker, "smart_upload_captions", lambda *a, **k: {})
 

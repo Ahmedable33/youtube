@@ -7,7 +7,11 @@ from src.ai_generator import MetaRequest, generate_metadata, _safe_json_loads
 
 
 def test_heuristic_generate_simple():
-    req = MetaRequest(topic="Demo Topic", provider="none", input_text="Un texte de test pour la description.")
+    req = MetaRequest(
+        topic="Demo Topic",
+        provider="none",
+        input_text="Un texte de test pour la description.",
+    )
     data = generate_metadata(req)
     assert isinstance(data, dict)
     assert data["title"]
@@ -41,7 +45,9 @@ seo:
         if "titre accrocheur" in prompt or "Donne UNIQUEMENT un titre" in prompt:
             return httpx.Response(200, json={"response": "Titre de test"})
         if "Ecris une description" in prompt:
-            return httpx.Response(200, json={"response": "Paragraphe 1.\n\nParagraphe 2."})
+            return httpx.Response(
+                200, json={"response": "Paragraphe 1.\n\nParagraphe 2."}
+            )
         if "tableau JSON" in prompt:
             return httpx.Response(200, json={"response": json.dumps(["tag1", "tag2"])})
         return httpx.Response(400, json={"error": "unexpected prompt"})
@@ -58,5 +64,5 @@ seo:
 
 def test_safe_json_loads_variants():
     assert _safe_json_loads('{"a": 1}') == {"a": 1}
-    assert _safe_json_loads("```json\n{\"a\":2}\n```") == {"a": 2}
-    assert _safe_json_loads("xx{\"b\":3}yy") == {"b": 3}
+    assert _safe_json_loads('```json\n{"a":2}\n```') == {"a": 2}
+    assert _safe_json_loads('xx{"b":3}yy') == {"b": 3}

@@ -22,6 +22,7 @@ def test_subtitles_replace_existing_partial_failure(monkeypatch, tmp_path: Path)
     def _stub_build(*args, **kwargs):
         class _Svc:
             pass
+
         return _Svc()
 
     class _StubMediaFileUpload:
@@ -33,10 +34,10 @@ def test_subtitles_replace_existing_partial_failure(monkeypatch, tmp_path: Path)
     ga_discovery.build = _stub_build
     ga_http.MediaFileUpload = _StubMediaFileUpload
 
-    sys.modules['googleapiclient'] = ga
-    sys.modules['googleapiclient.discovery'] = ga_discovery
-    sys.modules['googleapiclient.errors'] = ga_errors
-    sys.modules['googleapiclient.http'] = ga_http
+    sys.modules["googleapiclient"] = ga
+    sys.modules["googleapiclient.discovery"] = ga_discovery
+    sys.modules["googleapiclient.errors"] = ga_errors
+    sys.modules["googleapiclient.http"] = ga_http
 
     from src import worker
 
@@ -64,7 +65,8 @@ def test_subtitles_replace_existing_partial_failure(monkeypatch, tmp_path: Path)
 
     queue_dir = tmp_path / "queue"
     archive_dir = tmp_path / "queue_archive"
-    queue_dir.mkdir(); archive_dir.mkdir()
+    queue_dir.mkdir()
+    archive_dir.mkdir()
 
     video = tmp_path / "video.mp4"
     video.write_bytes(b"\x00\x00fakevideo")
@@ -85,20 +87,28 @@ def test_subtitles_replace_existing_partial_failure(monkeypatch, tmp_path: Path)
 
     # Stubs for credentials, upload, thumbnails
     monkeypatch.setattr(worker, "get_credentials", lambda *a, **k: object())
-    monkeypatch.setattr(worker, "upload_video", lambda *a, **k: {"id": "vid_sub_partial"})
+    monkeypatch.setattr(
+        worker, "upload_video", lambda *a, **k: {"id": "vid_sub_partial"}
+    )
     monkeypatch.setattr(worker, "get_best_thumbnail", lambda *a, **k: None)
 
     # Subtitles generation stubs
     monkeypatch.setattr(worker, "is_whisper_available", lambda: True)
     monkeypatch.setattr(worker, "detect_language", lambda *_a, **_k: "fr")
 
-    def _fake_generate_subtitles(video_path, output_path, language, model, translate_to_english=False):
-        Path(output_path).write_text("1\n00:00:00,000 --> 00:00:01,000\nHELLO\n", encoding="utf-8")
+    def _fake_generate_subtitles(
+        video_path, output_path, language, model, translate_to_english=False
+    ):
+        Path(output_path).write_text(
+            "1\n00:00:00,000 --> 00:00:01,000\nHELLO\n", encoding="utf-8"
+        )
 
     monkeypatch.setattr(worker, "generate_subtitles", _fake_generate_subtitles)
 
     # smart_upload_captions returns partial success: fr OK, en FAIL
-    def _fake_smart_upload(credentials, video_id, subtitle_files, replace_existing, is_draft):
+    def _fake_smart_upload(
+        credentials, video_id, subtitle_files, replace_existing, is_draft
+    ):
         return {
             "fr": {"success": True, "action": "updated", "caption_id": "cap_fr"},
             "en": {"success": False, "error": "quota exceeded"},

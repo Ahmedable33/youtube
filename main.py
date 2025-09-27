@@ -23,6 +23,7 @@ enhance_video = None  # type: ignore
 run_bot_from_sources = None  # type: ignore
 process_queue = None  # type: ignore
 
+
 def _quality_defaults(name: Optional[str]) -> dict:
     """Retourne un dict d'options par défaut pour un préréglage de qualité.
 
@@ -101,7 +102,9 @@ def build_parser() -> argparse.ArgumentParser:
         default=None,
         help="Tags (séparés par des espaces)",
     )
-    up.add_argument("--category-id", type=str, default="22", help="ID catégorie (par défaut 22)")
+    up.add_argument(
+        "--category-id", type=str, default="22", help="ID catégorie (par défaut 22)"
+    )
     up.add_argument(
         "--privacy",
         type=str,
@@ -115,20 +118,49 @@ def build_parser() -> argparse.ArgumentParser:
         default=None,
         help="Date/heure de publication (RFC3339 UTC, ex: 2025-08-31T12:00:00Z)",
     )
-    up.add_argument("--thumbnail", type=str, default=None, help="Chemin de la miniature (optionnel)")
-    up.add_argument("--made-for-kids", type=str, default=None, choices=["true", "false"], help="Contenu pour enfants")
+    up.add_argument(
+        "--thumbnail", type=str, default=None, help="Chemin de la miniature (optionnel)"
+    )
+    up.add_argument(
+        "--made-for-kids",
+        type=str,
+        default=None,
+        choices=["true", "false"],
+        help="Contenu pour enfants",
+    )
 
     # OAuth options
     # Ne pas importer src.auth ici: utiliser des valeurs par défaut littérales
-    up.add_argument("--client-secrets", type=str, default="config/client_secret.json", help="Chemin client_secret.json")
-    up.add_argument("--token-file", type=str, default="config/token.json", help="Chemin token.json")
-    up.add_argument("--headless", action="store_true", help="Flux OAuth en console (sans navigateur)")
+    up.add_argument(
+        "--client-secrets",
+        type=str,
+        default="config/client_secret.json",
+        help="Chemin client_secret.json",
+    )
+    up.add_argument(
+        "--token-file", type=str, default="config/token.json", help="Chemin token.json"
+    )
+    up.add_argument(
+        "--headless",
+        action="store_true",
+        help="Flux OAuth en console (sans navigateur)",
+    )
 
     # Logging
-    up.add_argument("--log-level", type=str, default="INFO", choices=["DEBUG", "INFO", "WARNING", "ERROR"], help="Niveau de logs")
+    up.add_argument(
+        "--log-level",
+        type=str,
+        default="INFO",
+        choices=["DEBUG", "INFO", "WARNING", "ERROR"],
+        help="Niveau de logs",
+    )
 
     # Pré-amélioration (ffmpeg) avant upload
-    up.add_argument("--pre-enhance", action="store_true", help="Améliorer la vidéo via ffmpeg avant l'upload (ou via config.enhance.enabled)")
+    up.add_argument(
+        "--pre-enhance",
+        action="store_true",
+        help="Améliorer la vidéo via ffmpeg avant l'upload (ou via config.enhance.enabled)",
+    )
     up.add_argument(
         "--enhance-quality",
         type=str,
@@ -136,18 +168,52 @@ def build_parser() -> argparse.ArgumentParser:
         choices=["low", "medium", "high", "youtube", "max"],
         help="Préréglage qualité pour l'étape d'amélioration",
     )
-    up.add_argument("--enhance-scale", type=str, default=None, help="Scale: 720p|1080p|1440p|2160p|WIDTHxHEIGHT|1.5x|2x")
-    up.add_argument("--enhance-fps", type=float, default=None, help="Forcer la cadence (ex: 30)")
-    up.add_argument("--enhance-denoise", action="store_true", help="Réduction de bruit (hqdn3d)")
-    up.add_argument("--enhance-sharpen", action="store_true", help="Renforcer la netteté (unsharp)")
-    up.add_argument("--enhance-deinterlace", action="store_true", help="Désentrelacer (yadif)")
-    up.add_argument("--enhance-color-fix", action="store_true", help="Ajustement léger contraste/saturation")
-    up.add_argument("--enhance-loudnorm", action="store_true", help="Normalisation loudness EBU R128")
-    up.add_argument("--enhance-deband", action="store_true", help="Réduire le banding (deband)")
-    up.add_argument("--enhance-deblock", action="store_true", help="Réduire les blocs (deblock)")
-    up.add_argument("--enhance-sharpen-amount", type=float, default=None, help="Intensité de netteté (0.0-1.0)")
-    up.add_argument("--enhance-contrast", type=float, default=None, help="Contraste (ex: 1.07)")
-    up.add_argument("--enhance-saturation", type=float, default=None, help="Saturation (ex: 1.12)")
+    up.add_argument(
+        "--enhance-scale",
+        type=str,
+        default=None,
+        help="Scale: 720p|1080p|1440p|2160p|WIDTHxHEIGHT|1.5x|2x",
+    )
+    up.add_argument(
+        "--enhance-fps", type=float, default=None, help="Forcer la cadence (ex: 30)"
+    )
+    up.add_argument(
+        "--enhance-denoise", action="store_true", help="Réduction de bruit (hqdn3d)"
+    )
+    up.add_argument(
+        "--enhance-sharpen", action="store_true", help="Renforcer la netteté (unsharp)"
+    )
+    up.add_argument(
+        "--enhance-deinterlace", action="store_true", help="Désentrelacer (yadif)"
+    )
+    up.add_argument(
+        "--enhance-color-fix",
+        action="store_true",
+        help="Ajustement léger contraste/saturation",
+    )
+    up.add_argument(
+        "--enhance-loudnorm",
+        action="store_true",
+        help="Normalisation loudness EBU R128",
+    )
+    up.add_argument(
+        "--enhance-deband", action="store_true", help="Réduire le banding (deband)"
+    )
+    up.add_argument(
+        "--enhance-deblock", action="store_true", help="Réduire les blocs (deblock)"
+    )
+    up.add_argument(
+        "--enhance-sharpen-amount",
+        type=float,
+        default=None,
+        help="Intensité de netteté (0.0-1.0)",
+    )
+    up.add_argument(
+        "--enhance-contrast", type=float, default=None, help="Contraste (ex: 1.07)"
+    )
+    up.add_argument(
+        "--enhance-saturation", type=float, default=None, help="Saturation (ex: 1.12)"
+    )
     up.add_argument(
         "--enhance-hwaccel",
         type=str,
@@ -155,8 +221,18 @@ def build_parser() -> argparse.ArgumentParser:
         choices=["none", "auto", "videotoolbox"],
         help="Accélération matérielle (macOS: videotoolbox)",
     )
-    up.add_argument("--enhance-crf", type=int, default=None, help="Qualité x264 (0-51, par défaut 18 si --bitrate non défini)")
-    up.add_argument("--enhance-bitrate", type=str, default=None, help="Bitrate vidéo cible (ex: 6M). Si défini, ignore CRF")
+    up.add_argument(
+        "--enhance-crf",
+        type=int,
+        default=None,
+        help="Qualité x264 (0-51, par défaut 18 si --bitrate non défini)",
+    )
+    up.add_argument(
+        "--enhance-bitrate",
+        type=str,
+        default=None,
+        help="Bitrate vidéo cible (ex: 6M). Si défini, ignore CRF",
+    )
     up.add_argument(
         "--enhance-preset",
         type=str,
@@ -181,41 +257,124 @@ def build_parser() -> argparse.ArgumentParser:
         choices=["h264", "hevc", "vp9", "av1"],
         help="Codec vidéo cible",
     )
-    up.add_argument("--enhance-reencode-audio", action="store_true", help="Réencoder l'audio en AAC")
-    up.add_argument("--enhance-audio-bitrate", type=str, default=None, help="Bitrate audio si réencodage (par défaut 192k)")
-    up.add_argument("--enhance-output", type=str, default=None, help="Fichier de sortie pour la vidéo améliorée (par défaut <video>.enhanced.mp4)")
+    up.add_argument(
+        "--enhance-reencode-audio", action="store_true", help="Réencoder l'audio en AAC"
+    )
+    up.add_argument(
+        "--enhance-audio-bitrate",
+        type=str,
+        default=None,
+        help="Bitrate audio si réencodage (par défaut 192k)",
+    )
+    up.add_argument(
+        "--enhance-output",
+        type=str,
+        default=None,
+        help="Fichier de sortie pour la vidéo améliorée (par défaut <video>.enhanced.mp4)",
+    )
 
     # AI metadata generation
-    ai = sub.add_parser("ai-meta", help="Générer des métadonnées SEO (IA: Ollama/OpenAI)")
+    ai = sub.add_parser(
+        "ai-meta", help="Générer des métadonnées SEO (IA: Ollama/OpenAI)"
+    )
     ai.add_argument("--topic", type=str, required=True, help="Sujet/Thème de la vidéo")
     ai.add_argument("--language", type=str, default="fr", help="Langue (fr/en/...)")
-    ai.add_argument("--tone", type=str, default="informatif", help="Ton éditorial (ex: informatif, divertissant)")
-    ai.add_argument("--target-keywords", nargs="*", default=None, help="Mots-clés cibles")
-    ai.add_argument("--channel-style", type=str, default=None, help="Style de la chaîne (optionnel)")
-    ai.add_argument("--no-hashtags", dest="include_hashtags", action="store_false", help="Ne pas inclure de hashtags")
+    ai.add_argument(
+        "--tone",
+        type=str,
+        default="informatif",
+        help="Ton éditorial (ex: informatif, divertissant)",
+    )
+    ai.add_argument(
+        "--target-keywords", nargs="*", default=None, help="Mots-clés cibles"
+    )
+    ai.add_argument(
+        "--channel-style", type=str, default=None, help="Style de la chaîne (optionnel)"
+    )
+    ai.add_argument(
+        "--no-hashtags",
+        dest="include_hashtags",
+        action="store_false",
+        help="Ne pas inclure de hashtags",
+    )
     ai.set_defaults(include_hashtags=True)
     ai.add_argument("--max-tags", type=int, default=15, help="Nombre max de tags")
-    ai.add_argument("--max-title-chars", type=int, default=70, help="Longueur max du titre")
-    ai.add_argument("--provider", type=str, choices=["ollama", "openai", "none"], default=None, help="Fournisseur IA (par défaut: valeur de config)")
-    ai.add_argument("--model", type=str, default=None, help="Modèle IA (ex: gpt-4o-mini ou llama3.2:3b). Par défaut: valeur de config")
-    ai.add_argument("--input-text", type=str, default=None, help="Contexte facultatif (script/transcript)")
-    ai.add_argument("--out-config", type=str, default=None, help="Écrire les métadonnées dans ce YAML")
-    ai.add_argument("--video-path", type=str, default=None, help="Définir aussi video_path dans le YAML")
-    ai.add_argument("--print", action="store_true", help="Afficher les métadonnées générées")
-    ai.add_argument("--log-level", type=str, default="INFO", choices=["DEBUG", "INFO", "WARNING", "ERROR"], help="Niveau de logs")
+    ai.add_argument(
+        "--max-title-chars", type=int, default=70, help="Longueur max du titre"
+    )
+    ai.add_argument(
+        "--provider",
+        type=str,
+        choices=["ollama", "openai", "none"],
+        default=None,
+        help="Fournisseur IA (par défaut: valeur de config)",
+    )
+    ai.add_argument(
+        "--model",
+        type=str,
+        default=None,
+        help="Modèle IA (ex: gpt-4o-mini ou llama3.2:3b). Par défaut: valeur de config",
+    )
+    ai.add_argument(
+        "--input-text",
+        type=str,
+        default=None,
+        help="Contexte facultatif (script/transcript)",
+    )
+    ai.add_argument(
+        "--out-config",
+        type=str,
+        default=None,
+        help="Écrire les métadonnées dans ce YAML",
+    )
+    ai.add_argument(
+        "--video-path",
+        type=str,
+        default=None,
+        help="Définir aussi video_path dans le YAML",
+    )
+    ai.add_argument(
+        "--print", action="store_true", help="Afficher les métadonnées générées"
+    )
+    ai.add_argument(
+        "--log-level",
+        type=str,
+        default="INFO",
+        choices=["DEBUG", "INFO", "WARNING", "ERROR"],
+        help="Niveau de logs",
+    )
 
     # yt-dlp ingestion
     ing = sub.add_parser("ingest", help="Télécharger une source vidéo (yt-dlp)")
     ing.add_argument("url", type=str, help="URL de la vidéo/source")
-    ing.add_argument("--output-dir", type=str, default="downloads", help="Dossier de sortie")
-    ing.add_argument("--filename", type=str, default=None, help="Nom de fichier (sans extension)")
-    ing.add_argument("--ext", type=str, default="mp4", help="Extension de sortie (mp4, mkv,...)")
-    ing.add_argument("--log-level", type=str, default="INFO", choices=["DEBUG", "INFO", "WARNING", "ERROR"], help="Niveau de logs")
+    ing.add_argument(
+        "--output-dir", type=str, default="downloads", help="Dossier de sortie"
+    )
+    ing.add_argument(
+        "--filename", type=str, default=None, help="Nom de fichier (sans extension)"
+    )
+    ing.add_argument(
+        "--ext", type=str, default="mp4", help="Extension de sortie (mp4, mkv,...)"
+    )
+    ing.add_argument(
+        "--log-level",
+        type=str,
+        default="INFO",
+        choices=["DEBUG", "INFO", "WARNING", "ERROR"],
+        help="Niveau de logs",
+    )
 
     # video enhancement (ffmpeg)
-    enh = sub.add_parser("enhance", help="Améliorer la qualité (upscale, denoise, sharpen, etc.)")
+    enh = sub.add_parser(
+        "enhance", help="Améliorer la qualité (upscale, denoise, sharpen, etc.)"
+    )
     enh.add_argument("--input", type=str, required=True, help="Fichier vidéo d'entrée")
-    enh.add_argument("--output", type=str, required=True, help="Fichier de sortie (ex: outputs/enhanced.mp4)")
+    enh.add_argument(
+        "--output",
+        type=str,
+        required=True,
+        help="Fichier de sortie (ex: outputs/enhanced.mp4)",
+    )
     enh.add_argument(
         "--quality",
         type=str,
@@ -229,17 +388,40 @@ def build_parser() -> argparse.ArgumentParser:
         default=None,
         help="Cible d'upscale: 720p|1080p|1440p|2160p|WIDTHxHEIGHT|1.5x|2x",
     )
-    enh.add_argument("--fps", type=float, default=None, help="Forcer la cadence (ex: 30)")
-    enh.add_argument("--denoise", action="store_true", help="Réduction de bruit (hqdn3d)")
-    enh.add_argument("--sharpen", action="store_true", help="Renforcer la netteté (unsharp)")
+    enh.add_argument(
+        "--fps", type=float, default=None, help="Forcer la cadence (ex: 30)"
+    )
+    enh.add_argument(
+        "--denoise", action="store_true", help="Réduction de bruit (hqdn3d)"
+    )
+    enh.add_argument(
+        "--sharpen", action="store_true", help="Renforcer la netteté (unsharp)"
+    )
     enh.add_argument("--deinterlace", action="store_true", help="Désentrelacer (yadif)")
-    enh.add_argument("--color-fix", action="store_true", help="Léger ajustement contraste/saturation")
-    enh.add_argument("--loudnorm", action="store_true", help="Normalisation loudness EBU R128")
-    enh.add_argument("--deband", action="store_true", help="Réduire le banding (deband)")
-    enh.add_argument("--deblock", action="store_true", help="Réduire les blocs (deblock)")
-    enh.add_argument("--sharpen-amount", type=float, default=None, help="Intensité de netteté (0.0-1.0)")
-    enh.add_argument("--contrast", type=float, default=None, help="Contraste (ex: 1.07)")
-    enh.add_argument("--saturation", type=float, default=None, help="Saturation (ex: 1.12)")
+    enh.add_argument(
+        "--color-fix", action="store_true", help="Léger ajustement contraste/saturation"
+    )
+    enh.add_argument(
+        "--loudnorm", action="store_true", help="Normalisation loudness EBU R128"
+    )
+    enh.add_argument(
+        "--deband", action="store_true", help="Réduire le banding (deband)"
+    )
+    enh.add_argument(
+        "--deblock", action="store_true", help="Réduire les blocs (deblock)"
+    )
+    enh.add_argument(
+        "--sharpen-amount",
+        type=float,
+        default=None,
+        help="Intensité de netteté (0.0-1.0)",
+    )
+    enh.add_argument(
+        "--contrast", type=float, default=None, help="Contraste (ex: 1.07)"
+    )
+    enh.add_argument(
+        "--saturation", type=float, default=None, help="Saturation (ex: 1.12)"
+    )
     enh.add_argument(
         "--hwaccel",
         type=str,
@@ -283,21 +465,70 @@ def build_parser() -> argparse.ArgumentParser:
         ],
         help="Préréglage x264 (par défaut selon preset, sinon medium)",
     )
-    enh.add_argument("--reencode-audio", action="store_true", help="Réencoder l'audio en AAC")
-    enh.add_argument("--audio-bitrate", type=str, default=None, help="Bitrate audio si réencodage (par défaut 192k)")
-    enh.add_argument("--log-level", type=str, default="INFO", choices=["DEBUG", "INFO", "WARNING", "ERROR"], help="Niveau de logs")
+    enh.add_argument(
+        "--reencode-audio", action="store_true", help="Réencoder l'audio en AAC"
+    )
+    enh.add_argument(
+        "--audio-bitrate",
+        type=str,
+        default=None,
+        help="Bitrate audio si réencodage (par défaut 192k)",
+    )
+    enh.add_argument(
+        "--log-level",
+        type=str,
+        default="INFO",
+        choices=["DEBUG", "INFO", "WARNING", "ERROR"],
+        help="Niveau de logs",
+    )
 
     # Telegram bot
-    tgb = sub.add_parser("telegram-bot", help="Lancer le bot Telegram pour ingérer des vidéos")
-    tgb.add_argument("--sources", type=str, default="config/sources.yaml", help="Fichier de configuration des sources (YAML)")
-    tgb.add_argument("--log-level", type=str, default="INFO", choices=["DEBUG", "INFO", "WARNING", "ERROR"], help="Niveau de logs")
+    tgb = sub.add_parser(
+        "telegram-bot", help="Lancer le bot Telegram pour ingérer des vidéos"
+    )
+    tgb.add_argument(
+        "--sources",
+        type=str,
+        default="config/sources.yaml",
+        help="Fichier de configuration des sources (YAML)",
+    )
+    tgb.add_argument(
+        "--log-level",
+        type=str,
+        default="INFO",
+        choices=["DEBUG", "INFO", "WARNING", "ERROR"],
+        help="Niveau de logs",
+    )
 
     # Worker (queue processor)
-    wk = sub.add_parser("worker", help="Traiter la file de tâches: enhance -> ai_meta -> upload")
-    wk.add_argument("--queue-dir", type=str, default="queue", help="Dossier de la file (tâches JSON)")
-    wk.add_argument("--archive-dir", type=str, default="queue_archive", help="Dossier d'archivage des tâches traitées")
-    wk.add_argument("--config", type=str, default=None, help="Config vidéo (YAML) pour presets et métadonnées basiques")
-    wk.add_argument("--log-level", type=str, default="INFO", choices=["DEBUG", "INFO", "WARNING", "ERROR"], help="Niveau de logs")
+    wk = sub.add_parser(
+        "worker", help="Traiter la file de tâches: enhance -> ai_meta -> upload"
+    )
+    wk.add_argument(
+        "--queue-dir",
+        type=str,
+        default="queue",
+        help="Dossier de la file (tâches JSON)",
+    )
+    wk.add_argument(
+        "--archive-dir",
+        type=str,
+        default="queue_archive",
+        help="Dossier d'archivage des tâches traitées",
+    )
+    wk.add_argument(
+        "--config",
+        type=str,
+        default=None,
+        help="Config vidéo (YAML) pour presets et métadonnées basiques",
+    )
+    wk.add_argument(
+        "--log-level",
+        type=str,
+        default="INFO",
+        choices=["DEBUG", "INFO", "WARNING", "ERROR"],
+        help="Niveau de logs",
+    )
 
     return p
 
@@ -339,7 +570,9 @@ def main(argv: Optional[List[str]] = None) -> int:
             privacy_status = args.privacy
             publish_at = args.publish_at
             thumbnail_path = args.thumbnail
-            made_for_kids = None if args.made_for_kids is None else (args.made_for_kids == "true")
+            made_for_kids = (
+                None if args.made_for_kids is None else (args.made_for_kids == "true")
+            )
             enhance_cfg = None
 
         # Étape optionnelle d'amélioration avant upload
@@ -356,12 +589,17 @@ def main(argv: Optional[List[str]] = None) -> int:
                     return enhance_cfg.get(cfg_key)
                 return default
 
-            qname_cfg = (enhance_cfg or {}).get("quality") if isinstance(enhance_cfg, dict) else None
+            qname_cfg = (
+                (enhance_cfg or {}).get("quality")
+                if isinstance(enhance_cfg, dict)
+                else None
+            )
             qname = args.enhance_quality or qname_cfg
             base = _quality_defaults(qname)
 
             scale = pick(args.enhance_scale, "scale", base.get("scale"))
             fps = pick(args.enhance_fps, "fps", base.get("fps"))
+
             # Booleens: True si CLI, sinon valeur config si présente, sinon valeur du preset, sinon False
             def pbool(cli_flag: bool, key: str) -> bool:
                 if cli_flag:
@@ -386,10 +624,20 @@ def main(argv: Optional[List[str]] = None) -> int:
                 hwaccel = "videotoolbox" if sys.platform == "darwin" else "none"
             codec = pick(args.enhance_codec, "codec", base.get("codec", "h264"))
             reencode_audio = pbool(bool(args.enhance_reencode_audio), "reencode_audio")
-            audio_bitrate = pick(args.enhance_audio_bitrate, "audio_bitrate", base.get("audio_bitrate", "192k"))
-            sharpen_amount = pick(args.enhance_sharpen_amount, "sharpen_amount", base.get("sharpen_amount"))
+            audio_bitrate = pick(
+                args.enhance_audio_bitrate,
+                "audio_bitrate",
+                base.get("audio_bitrate", "192k"),
+            )
+            sharpen_amount = pick(
+                args.enhance_sharpen_amount,
+                "sharpen_amount",
+                base.get("sharpen_amount"),
+            )
             contrast = pick(args.enhance_contrast, "contrast", base.get("contrast"))
-            saturation = pick(args.enhance_saturation, "saturation", base.get("saturation"))
+            saturation = pick(
+                args.enhance_saturation, "saturation", base.get("saturation")
+            )
 
             vd_path = Path(video_path)
             if args.enhance_output:
@@ -401,11 +649,13 @@ def main(argv: Optional[List[str]] = None) -> int:
             _enhance_video = globals().get("enhance_video")
             if not callable(_enhance_video):
                 from src.video_enhance import enhance_video as _impl, EnhanceError
+
                 _enhance_video = _impl
             else:
                 # Define EnhanceError placeholder if tests patch only function
                 class EnhanceError(Exception):
                     pass
+
             try:
                 enhanced = _enhance_video(
                     input_path=vd_path,
@@ -440,10 +690,12 @@ def main(argv: Optional[List[str]] = None) -> int:
         _get_credentials = globals().get("get_credentials")
         if not callable(_get_credentials):
             from src.auth import get_credentials as _impl
+
             _get_credentials = _impl
         _upload_video = globals().get("upload_video")
         if not callable(_upload_video):
             from src.uploader import upload_video as _uimpl
+
             _upload_video = _uimpl
 
         creds = _get_credentials(
@@ -506,6 +758,7 @@ def main(argv: Optional[List[str]] = None) -> int:
         _download_source = globals().get("download_source")
         if not callable(_download_source):
             from src.ingest import download_source as _impl
+
             _download_source = _impl
         path = _download_source(
             args.url,
@@ -519,8 +772,10 @@ def main(argv: Optional[List[str]] = None) -> int:
         _enhance_video2 = globals().get("enhance_video")
         if not callable(_enhance_video2):
             from src.video_enhance import enhance_video as _enh
+
             _enhance_video2 = _enh
         base = _quality_defaults(getattr(args, "quality", None))
+
         def pick2(cli_val, key, default=None):
             if cli_val is not None:
                 return cli_val
@@ -578,6 +833,7 @@ def main(argv: Optional[List[str]] = None) -> int:
         _run_bot = globals().get("run_bot_from_sources")
         if not callable(_run_bot):
             from src.ingest_telegram import run_bot_from_sources as _impl
+
             _run_bot = _impl
         logging.getLogger("httpx").setLevel(logging.WARNING)
         _run_bot(args.sources)
@@ -586,8 +842,14 @@ def main(argv: Optional[List[str]] = None) -> int:
         _process_queue = globals().get("process_queue")
         if not callable(_process_queue):
             from src.worker import process_queue as _impl
+
             _process_queue = _impl
-        _process_queue(queue_dir=args.queue_dir, archive_dir=args.archive_dir, config_path=args.config, log_level=args.log_level)
+        _process_queue(
+            queue_dir=args.queue_dir,
+            archive_dir=args.archive_dir,
+            config_path=args.config,
+            log_level=args.log_level,
+        )
 
     return 0
 

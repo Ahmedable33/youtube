@@ -34,19 +34,30 @@ def test_openai_path_returns_expected_json(monkeypatch, tmp_path):
         "description": "Description AI",
         "tags": ["ai", "test"],
         "hashtags": ["#ai"],
-        "seo_tips": ["tip"]
+        "seo_tips": ["tip"],
     }
     # Patch client creator and direct OpenAI generate to avoid any runtime dependencies
-    monkeypatch.setattr(ai_gen, "_get_openai_client", lambda: _FakeOpenAI(json.dumps(fake_json)))
-    monkeypatch.setattr(ai_gen, "_openai_generate", lambda req, client, vision: fake_json)
+    monkeypatch.setattr(
+        ai_gen, "_get_openai_client", lambda: _FakeOpenAI(json.dumps(fake_json))
+    )
+    monkeypatch.setattr(
+        ai_gen, "_openai_generate", lambda req, client, vision: fake_json
+    )
 
     # Config minimale isolée (évite d'influencer avec le fichier du projet)
     cfg_path = tmp_path / "video.yaml"
-    cfg_path.write_text(yaml.safe_dump({
-        "seo": {"provider": "openai", "model": "gpt-4o-mini"}
-    }, allow_unicode=True, sort_keys=False), encoding="utf-8")
+    cfg_path.write_text(
+        yaml.safe_dump(
+            {"seo": {"provider": "openai", "model": "gpt-4o-mini"}},
+            allow_unicode=True,
+            sort_keys=False,
+        ),
+        encoding="utf-8",
+    )
 
-    req = MetaRequest(topic="Sujet", provider="openai", language="fr", tone="informatif")
+    req = MetaRequest(
+        topic="Sujet", provider="openai", language="fr", tone="informatif"
+    )
     data = ai_gen.generate_metadata(req, config_path=str(cfg_path))
 
     assert data["title"] == "Titre AI"
@@ -59,9 +70,12 @@ def test_openai_invalid_json_falls_back_to_heuristic(monkeypatch, tmp_path):
     monkeypatch.setattr(ai_gen, "_get_openai_client", lambda: _FakeOpenAI("Not a JSON"))
 
     cfg_path = tmp_path / "video.yaml"
-    cfg_path.write_text(yaml.safe_dump({
-        "seo": {"provider": "openai"}
-    }, allow_unicode=True, sort_keys=False), encoding="utf-8")
+    cfg_path.write_text(
+        yaml.safe_dump(
+            {"seo": {"provider": "openai"}}, allow_unicode=True, sort_keys=False
+        ),
+        encoding="utf-8",
+    )
 
     req = MetaRequest(topic="Sujet Heuristique", provider="openai", language="fr")
     data = ai_gen.generate_metadata(req, config_path=str(cfg_path))
