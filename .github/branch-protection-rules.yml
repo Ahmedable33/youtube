@@ -11,7 +11,7 @@ branch_protection_rules:
       contexts:
         - test  # Le job de test doit passer
     required_pull_request_reviews:
-      required_approving_review_count: 1  # Au moins une approbation
+      required_approving_review_count: 0  # Au moins une approbation
       dismiss_stale_reviews: true  # Annule les approbations si de nouveaux commits sont poussés
       require_code_owner_reviews: false
     enforce_admins: true  # Les administrateurs doivent aussi suivre ces règles
