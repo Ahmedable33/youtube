@@ -5,6 +5,7 @@ Veuillez décrire les changements apportés et le contexte. Liez les issues si a
 Fixes #
 
 ## Type de changement
+
 - [ ] Feature
 - [ ] Fix
 - [ ] Docs
@@ -13,6 +14,7 @@ Fixes #
 - [ ] Chore
 
 ## Checklist
+
 - [ ] Les tests passent en CI (job "Run Tests")
 - [ ] Les nouvelles fonctionnalités sont couvertes par des tests
 - [ ] Le code respecte `black`, `flake8` et `mypy`
