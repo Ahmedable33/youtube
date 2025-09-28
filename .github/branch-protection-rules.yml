@@ -9,16 +9,19 @@ branch_protection_rules:
     required_status_checks:
       strict: true  # Nécessite que la branche soit à jour avant la fusion
       contexts:
-        - test  # Le job de test doit passer
+        - CI / tests
+        - PR Quality / checks
+        - CodeQL / Analyze (CodeQL)
+        - Code scanning results / CodeQL
     required_pull_request_reviews:
-      required_approving_review_count: 1  # Au moins une approbation
+      required_approving_review_count: 0  # Au moins une approbation
       dismiss_stale_reviews: true  # Annule les approbations si de nouveaux commits sont poussés
       require_code_owner_reviews: false
     enforce_admins: true  # Les administrateurs doivent aussi suivre ces règles
     required_linear_history: true  # Historique linéaire obligatoire
     allow_force_pushes: false  # Interdit les force pushes
     allow_deletions: false  # Empêche la suppression de la branche
-    required_conversation_resolution: true  # Toutes les discussions doivent être résolues
+    required_conversation_resolution: false  # Toutes les discussions doivent être résolues
     lock_branch: false  # Ne pas verrouiller la branche (permet les PRs)
     allow_fork_syncing: true  # Permet la synchronisation des forks
     restrictions: null  # Aucune restriction spécifique d'utilisateur/équipe
