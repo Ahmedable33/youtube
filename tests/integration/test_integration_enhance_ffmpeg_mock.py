@@ -18,9 +18,11 @@ class _FakeProc:
             "frame=  200 fps=30 time=00:00:10,00 bitrate=2000kbits/s\n",
         ]
         self.stderr = iter(self._stderr_lines)
+
         class _Stdout:
             def read(self_inner):
                 return ""
+
         self.stdout = _Stdout()
 
     def wait(self):
@@ -29,7 +31,9 @@ class _FakeProc:
 
 def _install_ffmpeg_monkeypatch(monkeypatch):
     # Pretend ffmpeg exists
-    monkeypatch.setattr(ve.shutil, "which", lambda name: "/usr/bin/ffmpeg" if name == "ffmpeg" else None)
+    monkeypatch.setattr(
+        ve.shutil, "which", lambda name: "/usr/bin/ffmpeg" if name == "ffmpeg" else None
+    )
     # Replace subprocess.Popen used inside enhance_video
     monkeypatch.setattr(ve.subprocess, "Popen", _FakeProc)
 
@@ -41,15 +45,22 @@ def test_cli_enhance_with_mock_ffmpeg(monkeypatch, tmp_path, capsys):
     inp.write_bytes(b"\x00\x00fake")
     out = tmp_path / "out.mp4"
 
-    rc = cli.main([
-        "enhance",
-        "--input", str(inp),
-        "--output", str(out),
-        "--quality", "youtube",
-        "--scale", "1080p",
-        "--denoise",
-        "--log-level", "INFO",
-    ])
+    rc = cli.main(
+        [
+            "enhance",
+            "--input",
+            str(inp),
+            "--output",
+            str(out),
+            "--quality",
+            "youtube",
+            "--scale",
+            "1080p",
+            "--denoise",
+            "--log-level",
+            "INFO",
+        ]
+    )
     assert rc == 0
     # The CLI prints the output path on success
     printed = capsys.readouterr().out.strip()
@@ -62,27 +73,36 @@ def test_worker_enhance_with_mock_ffmpeg(monkeypatch, tmp_path: Path):
     ga_discovery = types.ModuleType("googleapiclient.discovery")
     ga_errors = types.ModuleType("googleapiclient.errors")
     ga_http = types.ModuleType("googleapiclient.http")
+
     class _StubResumableUploadError(Exception):
         pass
+
     ga_errors.ResumableUploadError = _StubResumableUploadError
+
     class _StubHttpError(Exception):
         def __init__(self, *args, **kwargs):
             self.resp = types.SimpleNamespace(status=403)
             super().__init__(*args)
+
     ga_errors.HttpError = _StubHttpError
+
     def _stub_build(*args, **kwargs):
         class _Svc:
             pass
+
         return _Svc()
+
     ga_discovery.build = _stub_build
+
     class _StubMediaFileUpload:
         def __init__(self, *args, **kwargs):
             pass
+
     ga_http.MediaFileUpload = _StubMediaFileUpload
-    sys.modules['googleapiclient'] = ga
-    sys.modules['googleapiclient.discovery'] = ga_discovery
-    sys.modules['googleapiclient.errors'] = ga_errors
-    sys.modules['googleapiclient.http'] = ga_http
+    sys.modules["googleapiclient"] = ga
+    sys.modules["googleapiclient.discovery"] = ga_discovery
+    sys.modules["googleapiclient.errors"] = ga_errors
+    sys.modules["googleapiclient.http"] = ga_http
 
     from src import worker
 
@@ -121,6 +141,7 @@ def test_worker_enhance_with_mock_ffmpeg(monkeypatch, tmp_path: Path):
 
     # Capture the video_path passed to upload_video (should be enhanced path)
     captured = {}
+
     def fake_upload(creds, video_path, **kwargs):
         captured["video_path"] = video_path
         return {"id": "vid_enh_1"}

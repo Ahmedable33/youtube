@@ -10,13 +10,15 @@ def test_worker_integration_end_to_end(monkeypatch, tmp_path: Path):
     ga_discovery = types.ModuleType("googleapiclient.discovery")
     ga_errors = types.ModuleType("googleapiclient.errors")
     ga_http = types.ModuleType("googleapiclient.http")
+
     class _StubResumableUploadError(Exception):
         pass
+
     ga_errors.ResumableUploadError = _StubResumableUploadError
-    sys.modules['googleapiclient'] = ga
-    sys.modules['googleapiclient.discovery'] = ga_discovery
-    sys.modules['googleapiclient.errors'] = ga_errors
-    sys.modules['googleapiclient.http'] = ga_http
+    sys.modules["googleapiclient"] = ga
+    sys.modules["googleapiclient.discovery"] = ga_discovery
+    sys.modules["googleapiclient.errors"] = ga_errors
+    sys.modules["googleapiclient.http"] = ga_http
 
     from src import worker
 
@@ -51,7 +53,7 @@ def test_worker_integration_end_to_end(monkeypatch, tmp_path: Path):
             "description": "Desc Worker",
             "tags": ["w1", "w2"],
         },
-        "skip_enhance": True
+        "skip_enhance": True,
     }
     task_path = queue_dir / "task_001.json"
     task_path.write_text(json.dumps(task), encoding="utf-8")

@@ -23,6 +23,7 @@ def _stub_google_api_modules():
     def _stub_build(*args, **kwargs):
         class _Svc:
             pass
+
         return _Svc()
 
     class _StubMediaFileUpload:
@@ -34,10 +35,10 @@ def _stub_google_api_modules():
     ga_discovery.build = _stub_build
     ga_http.MediaFileUpload = _StubMediaFileUpload
 
-    sys.modules['googleapiclient'] = ga
-    sys.modules['googleapiclient.discovery'] = ga_discovery
-    sys.modules['googleapiclient.errors'] = ga_errors
-    sys.modules['googleapiclient.http'] = ga_http
+    sys.modules["googleapiclient"] = ga
+    sys.modules["googleapiclient.discovery"] = ga_discovery
+    sys.modules["googleapiclient.errors"] = ga_errors
+    sys.modules["googleapiclient.http"] = ga_http
 
 
 def test_worker_custom_future_schedules(monkeypatch, tmp_path: Path):
@@ -58,7 +59,9 @@ def test_worker_custom_future_schedules(monkeypatch, tmp_path: Path):
     queue_dir = tmp_path / "queue"
     archive_dir = tmp_path / "queue_archive"
     schedule_dir = tmp_path / "schedule"
-    queue_dir.mkdir(); archive_dir.mkdir(); schedule_dir.mkdir()
+    queue_dir.mkdir()
+    archive_dir.mkdir()
+    schedule_dir.mkdir()
 
     video = tmp_path / "video.mp4"
     video.write_bytes(b"\x00\x00fakevideo")
@@ -84,10 +87,12 @@ def test_worker_custom_future_schedules(monkeypatch, tmp_path: Path):
     # Spy on schedule_task
     called = {}
     orig_schedule_task = UploadScheduler.schedule_task
+
     def spy_schedule(self, task_path_arg, scheduled_time=None, preferred_days=None):
         called["task_path"] = str(task_path_arg)
         called["scheduled_time"] = scheduled_time
         return orig_schedule_task(self, task_path_arg, scheduled_time, preferred_days)
+
     monkeypatch.setattr(UploadScheduler, "schedule_task", spy_schedule)
 
     # Run
@@ -111,7 +116,9 @@ def test_worker_custom_future_schedules(monkeypatch, tmp_path: Path):
     # Spy captured time close to our expected future time
     assert "scheduled_time" in called and called["scheduled_time"] is not None
     delta = abs((called["scheduled_time"] - future_dt).total_seconds())
-    assert delta < 120, f"scheduled_time differs too much: {called['scheduled_time']} vs {future_dt}"
+    assert (
+        delta < 120
+    ), f"scheduled_time differs too much: {called['scheduled_time']} vs {future_dt}"
 
 
 def test_worker_custom_past_processes_immediately(monkeypatch, tmp_path: Path):
@@ -130,7 +137,8 @@ def test_worker_custom_past_processes_immediately(monkeypatch, tmp_path: Path):
 
     queue_dir = tmp_path / "queue"
     archive_dir = tmp_path / "queue_archive"
-    queue_dir.mkdir(); archive_dir.mkdir()
+    queue_dir.mkdir()
+    archive_dir.mkdir()
 
     video = tmp_path / "video.mp4"
     video.write_bytes(b"\x00\x00fakevideo")
@@ -192,7 +200,9 @@ def test_worker_processes_scheduled_task_marks_completed(monkeypatch, tmp_path: 
     queue_dir = tmp_path / "queue"
     archive_dir = tmp_path / "queue_archive"
     schedule_dir = tmp_path / "schedule"
-    queue_dir.mkdir(); archive_dir.mkdir(); schedule_dir.mkdir()
+    queue_dir.mkdir()
+    archive_dir.mkdir()
+    schedule_dir.mkdir()
 
     video = tmp_path / "video.mp4"
     video.write_bytes(b"\x00\x00fakevideo")
@@ -214,9 +224,11 @@ def test_worker_processes_scheduled_task_marks_completed(monkeypatch, tmp_path: 
 
     # Spy mark_task_completed
     called = {}
+
     def spy_mark_completed(self, task_id: str):
         called["task_id"] = task_id
         return True
+
     monkeypatch.setattr(UploadScheduler, "mark_task_completed", spy_mark_completed)
 
     # Stubs

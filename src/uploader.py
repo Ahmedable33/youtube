@@ -107,7 +107,9 @@ def _resumable_upload_with_retry(request, max_retries: int = 8) -> dict:
         try:
             status, response = request.next_chunk()
             if status:
-                logger.info("Progression upload: %.2f%%", float(status.progress()) * 100)
+                logger.info(
+                    "Progression upload: %.2f%%", float(status.progress()) * 100
+                )
         except HttpError as e:
             if e.resp is not None:
                 status_code = getattr(e.resp, "status", None)
@@ -134,7 +136,7 @@ def _resumable_upload_with_retry(request, max_retries: int = 8) -> dict:
 
 def _exponential_backoff(retry_count: int) -> float:
     # Backoff exponentiel avec jitter (base 2)
-    max_sleep = min(60, (2 ** retry_count))
+    max_sleep = min(60, (2**retry_count))
     return random.uniform(1, max_sleep)
 
 
