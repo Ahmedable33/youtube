@@ -21,7 +21,6 @@ from .thumbnail_generator import get_best_thumbnail
 from .multi_account_manager import create_multi_account_manager
 
 
-
 log = logging.getLogger("worker")
 
 SCOPES = [
@@ -98,7 +97,9 @@ def _clean_title(title: str) -> str:
         return title
     s = title.strip()
     # Retirer préfixes
-    s = re.sub(r"^(titre\s*utilisateur\s*:\s*|title\s*:\s*)", "", s, flags=re.IGNORECASE)
+    s = re.sub(
+        r"^(titre\s*utilisateur\s*:\s*|title\s*:\s*)", "", s, flags=re.IGNORECASE
+    )
     s = s.strip()
     # Retirer guillemets paires
     pairs = [("«", "»"), ("“", "”"), ('"', '"'), ("'", "'")]
@@ -107,6 +108,7 @@ def _clean_title(title: str) -> str:
             s = s[1:-1].strip()
             break
     return s
+
 
 def _read_tasks(queue_dir: Path) -> list[Path]:
     # Inclure les tâches normales et celles issues du scheduler
@@ -125,10 +127,12 @@ def _save_task(path: Path, data: dict) -> None:
         json.dump(data, f, ensure_ascii=False, indent=2)
 
 
-def _process_subtitles(creds, video_id: str, video_path: Path, subtitles_cfg: dict, task: dict):
+def _process_subtitles(
+    creds, video_id: str, video_path: Path, subtitles_cfg: dict, task: dict
+):
     """
     Génère et upload les sous-titres pour une vidéo
-    
+
     Args:
         creds: Credentials YouTube
         video_id: ID de la vidéo YouTube
@@ -137,9 +141,11 @@ def _process_subtitles(creds, video_id: str, video_path: Path, subtitles_cfg: di
         task: Données de la tâche
     """
     if not is_whisper_available():
-        log.warning("Whisper non disponible, sous-titres ignorés. Installez avec: pip install openai-whisper")
+        log.warning(
+            "Whisper non disponible, sous-titres ignorés. Installez avec: pip install openai-whisper"
+        )
         return
-    
+
     model = subtitles_cfg.get("whisper_model", "base")
     languages = subtitles_cfg.get("languages", ["fr"])
     auto_detect = subtitles_cfg.get("auto_detect_language", True)
@@ -147,13 +153,13 @@ def _process_subtitles(creds, video_id: str, video_path: Path, subtitles_cfg: di
     upload_youtube = subtitles_cfg.get("upload_to_youtube", True)
     draft_mode = subtitles_cfg.get("draft_mode", False)
     replace_existing = subtitles_cfg.get("replace_existing", False)
-    
+
     # Dossier de sortie pour les sous-titres
     subtitles_dir = video_path.parent / "subtitles"
     subtitles_dir.mkdir(exist_ok=True)
-    
+
     log.info("Génération sous-titres pour vidéo %s", video_id)
-    
+
     try:
         # Détecter la langue source si demandé
         source_language = None
@@ -163,25 +169,25 @@ def _process_subtitles(creds, video_id: str, video_path: Path, subtitles_cfg: di
                 log.info("Langue détectée: %s", source_language)
             except Exception as e:
                 log.warning("Échec détection langue: %s", e)
-        
+
         # Si pas de détection, utiliser la première langue de la liste
         if not source_language and languages:
             source_language = languages[0]
-        
+
         subtitle_files = {}
-        
+
         # Générer pour chaque langue demandée
         for lang in languages:
             try:
                 srt_path = subtitles_dir / f"{video_path.stem}_{lang}.srt"
-                
+
                 if lang == source_language:
                     # Transcription dans la langue source
                     generate_subtitles(
                         video_path=video_path,
                         output_path=srt_path,
                         language=source_language,
-                        model=model
+                        model=model,
                     )
                 elif lang == "en" and translate_en:
                     # Traduction vers l'anglais
@@ -190,7 +196,7 @@ def _process_subtitles(creds, video_id: str, video_path: Path, subtitles_cfg: di
                         output_path=srt_path,
                         language=source_language,
                         model=model,
-                        translate_to_english=True
+                        translate_to_english=True,
                     )
                 else:
                     # Génération directe dans la langue cible
@@ -198,16 +204,16 @@ def _process_subtitles(creds, video_id: str, video_path: Path, subtitles_cfg: di
                         video_path=video_path,
                         output_path=srt_path,
                         language=lang,
-                        model=model
+                        model=model,
                     )
-                
+
                 if srt_path.exists():
                     subtitle_files[lang] = srt_path
                     log.info("Sous-titres générés: %s", srt_path)
-                
+
             except Exception as e:
                 log.error("Échec génération sous-titres %s: %s", lang, e)
-        
+
         # Ajouter traduction anglaise si demandée et pas déjà présente
         if translate_en and "en" not in subtitle_files and source_language != "en":
             try:
@@ -217,14 +223,14 @@ def _process_subtitles(creds, video_id: str, video_path: Path, subtitles_cfg: di
                     output_path=en_srt_path,
                     language=source_language,
                     model=model,
-                    translate_to_english=True
+                    translate_to_english=True,
                 )
                 if en_srt_path.exists():
                     subtitle_files["en"] = en_srt_path
                     log.info("Traduction anglaise générée: %s", en_srt_path)
             except Exception as e:
                 log.error("Échec traduction anglaise: %s", e)
-        
+
         # Upload vers YouTube si demandé
         if upload_youtube and subtitle_files:
             try:
@@ -232,30 +238,42 @@ def _process_subtitles(creds, video_id: str, video_path: Path, subtitles_cfg: di
                 _fn = globals().get("smart_upload_captions")
                 if not callable(_fn):
                     from src.youtube_captions import smart_upload_captions as _impl
+
                     _fn = _impl
                 results = _fn(
                     credentials=creds,
                     video_id=video_id,
                     subtitle_files=subtitle_files,
                     replace_existing=replace_existing,
-                    is_draft=draft_mode
+                    is_draft=draft_mode,
                 )
-                
+
                 # Logger les résultats
                 for lang, result in results.items():
                     if result.get("success"):
                         action = result.get("action", "unknown")
-                        log.info("Sous-titres %s %s: %s", lang, action, result.get("caption_id"))
+                        log.info(
+                            "Sous-titres %s %s: %s",
+                            lang,
+                            action,
+                            result.get("caption_id"),
+                        )
                     else:
-                        log.error("Échec upload sous-titres %s: %s", lang, result.get("error"))
-                
+                        log.error(
+                            "Échec upload sous-titres %s: %s", lang, result.get("error")
+                        )
+
                 # Sauvegarder les infos dans la tâche
                 task["subtitles"] = {
                     "generated": list(subtitle_files.keys()),
-                    "uploaded": [lang for lang, result in results.items() if result.get("success")],
-                    "source_language": source_language
+                    "uploaded": [
+                        lang
+                        for lang, result in results.items()
+                        if result.get("success")
+                    ],
+                    "source_language": source_language,
                 }
-                
+
             except Exception as e:
                 log.error("Erreur upload sous-titres vers YouTube: %s", e)
         else:
@@ -263,9 +281,9 @@ def _process_subtitles(creds, video_id: str, video_path: Path, subtitles_cfg: di
             task["subtitles"] = {
                 "generated": list(subtitle_files.keys()),
                 "uploaded": [],
-                "source_language": source_language
+                "source_language": source_language,
             }
-        
+
     except Exception as e:
         log.error("Erreur génération sous-titres: %s", e)
         raise
@@ -275,28 +293,32 @@ def _default_title_for(video_path: Path) -> str:
     return video_path.stem.replace("_", " ")[:90]
 
 
-def _handle_scheduled_task(task: dict, task_path: Path, scheduler: UploadScheduler) -> bool:
+def _handle_scheduled_task(
+    task: dict, task_path: Path, scheduler: UploadScheduler
+) -> bool:
     """
     Gérer une tâche avec planification
-    
+
     Returns:
         True si la tâche doit être traitée maintenant, False si elle doit être planifiée
     """
     schedule_mode = task.get("schedule_mode", "now")
-    
+
     if schedule_mode == "now":
         return True
-    
+
     elif schedule_mode == "auto":
         # Planifier automatiquement aux heures optimales
         try:
             scheduled_task = scheduler.schedule_task(task_path)
-            log.info(f"Tâche planifiée automatiquement: {scheduled_task.task_id} pour {scheduled_task.scheduled_time}")
+            log.info(
+                f"Tâche planifiée automatiquement: {scheduled_task.task_id} pour {scheduled_task.scheduled_time}"
+            )
             return False
         except Exception as e:
             log.error(f"Erreur planification automatique: {e}")
             return True  # Fallback: traiter immédiatement
-    
+
     elif schedule_mode == "custom":
         # Planifier à une heure spécifique
         custom_time_str = task.get("custom_schedule_time")
@@ -304,35 +326,50 @@ def _handle_scheduled_task(task: dict, task_path: Path, scheduler: UploadSchedul
             try:
                 from datetime import datetime
                 import pytz
-                
+
                 custom_time = datetime.fromisoformat(custom_time_str)
                 # Ajouter timezone si manquant
                 if custom_time.tzinfo is None:
                     tz = pytz.timezone("Europe/Paris")
                     custom_time = tz.localize(custom_time)
-                
+
                 # Vérifier si c'est dans le futur
                 now = datetime.now(pytz.timezone("Europe/Paris"))
                 if custom_time <= now:
-                    log.warning(f"Heure planifiée dans le passé, traitement immédiat: {custom_time}")
+                    log.warning(
+                        f"Heure planifiée dans le passé, traitement immédiat: {custom_time}"
+                    )
                     return True
-                
-                scheduled_task = scheduler.schedule_task(task_path, scheduled_time=custom_time)
-                log.info(f"Tâche planifiée pour {custom_time}: {scheduled_task.task_id}")
+
+                scheduled_task = scheduler.schedule_task(
+                    task_path, scheduled_time=custom_time
+                )
+                log.info(
+                    f"Tâche planifiée pour {custom_time}: {scheduled_task.task_id}"
+                )
                 return False
-                
+
             except Exception as e:
                 log.error(f"Erreur planification personnalisée: {e}")
                 return True  # Fallback: traiter immédiatement
         else:
             log.warning("Mode custom sans heure spécifiée, traitement immédiat")
             return True
-    
+
     return True  # Fallback par défaut
 
 
-def process_queue(*, queue_dir: str | Path, archive_dir: str | Path, config_path: Optional[str | Path] = None, log_level: str = "INFO") -> None:
-    logging.basicConfig(level=getattr(logging, log_level), format="%(asctime)s | %(levelname)s | %(name)s | %(message)s")
+def process_queue(
+    *,
+    queue_dir: str | Path,
+    archive_dir: str | Path,
+    config_path: Optional[str | Path] = None,
+    log_level: str = "INFO",
+) -> None:
+    logging.basicConfig(
+        level=getattr(logging, log_level),
+        format="%(asctime)s | %(levelname)s | %(name)s | %(message)s",
+    )
     qdir = Path(queue_dir)
     adir = Path(archive_dir)
     qdir.mkdir(parents=True, exist_ok=True)
@@ -341,8 +378,7 @@ def process_queue(*, queue_dir: str | Path, archive_dir: str | Path, config_path
     # Initialiser le scheduler pour la planification
     schedule_dir = qdir.parent / "schedule"
     scheduler = UploadScheduler(
-        config_path=config_path or Path("config/video.yaml"),
-        schedule_dir=schedule_dir
+        config_path=config_path or Path("config/video.yaml"), schedule_dir=schedule_dir
     )
 
     cfg = None
@@ -350,7 +386,9 @@ def process_queue(*, queue_dir: str | Path, archive_dir: str | Path, config_path
         try:
             cfg = load_config(config_path)
         except ConfigError as e:
-            log.warning("Config non chargée (%s), on continue avec des valeurs par défaut.", e)
+            log.warning(
+                "Config non chargée (%s), on continue avec des valeurs par défaut.", e
+            )
             cfg = None
 
     for task_path in _read_tasks(qdir):
@@ -358,7 +396,7 @@ def process_queue(*, queue_dir: str | Path, archive_dir: str | Path, config_path
             task = _load_task(task_path)
             if task.get("status") not in (None, "pending", "error"):
                 continue
-            
+
             # Vérifier si la tâche doit être planifiée
             if not _handle_scheduled_task(task, task_path, scheduler):
                 # Tâche planifiée, la supprimer de la queue normale
@@ -390,7 +428,7 @@ def process_queue(*, queue_dir: str | Path, archive_dir: str | Path, config_path
             # Amélioration vidéo (si activée et non skippée)
             enhanced = Path(video_path)
             skip_enhance = task.get("skip_enhance", False)
-            
+
             if skip_enhance:
                 log.info("Amélioration skippée (upload direct demandé)")
             elif enhance_cfg and enhance_cfg.get("enabled", True):
@@ -417,8 +455,10 @@ def process_queue(*, queue_dir: str | Path, archive_dir: str | Path, config_path
                         crf=(enhance_cfg or {}).get("crf"),
                         bitrate=(enhance_cfg or {}).get("bitrate"),
                         preset=(enhance_cfg or {}).get("preset", "medium"),
-                        reencode_audio=bool((enhance_cfg or {}).get("reencode_audio", True)),
-                        audio_bitrate=(enhance_cfg or {}).get("audio_bitrate", "192k")
+                        reencode_audio=bool(
+                            (enhance_cfg or {}).get("reencode_audio", True)
+                        ),
+                        audio_bitrate=(enhance_cfg or {}).get("audio_bitrate", "192k"),
                     )
                     log.info("Amélioration terminée: %s", enhanced)
                 except EnhanceError as e:
@@ -429,7 +469,9 @@ def process_queue(*, queue_dir: str | Path, archive_dir: str | Path, config_path
             # Métadonnées SEO: privilégier celles fournies dans la tâche (via Telegram)
             user_meta = (task.get("meta") or {}) if isinstance(task, dict) else {}
             title = user_meta.get("title") if user_meta.get("title") else None
-            description = user_meta.get("description") if user_meta.get("description") else None
+            description = (
+                user_meta.get("description") if user_meta.get("description") else None
+            )
             tags = list(user_meta.get("tags") or [])
 
             # Si des champs manquent ou si config impose le titre IA depuis la description
@@ -439,19 +481,41 @@ def process_queue(*, queue_dir: str | Path, archive_dir: str | Path, config_path
                     # Fallback: lire le YAML brut pour récupérer le bloc seo
                     try:
                         import yaml
-                        cfg_path = Path(config_path) if config_path else Path("config/video.yaml")
+
+                        cfg_path = (
+                            Path(config_path)
+                            if config_path
+                            else Path("config/video.yaml")
+                        )
                         if cfg_path.exists():
-                            raw_doc = yaml.safe_load(cfg_path.read_text(encoding="utf-8")) or {}
+                            raw_doc = (
+                                yaml.safe_load(cfg_path.read_text(encoding="utf-8"))
+                                or {}
+                            )
                             seo_cfg = raw_doc.get("seo")
                     except Exception:
                         seo_cfg = None
-                seo_provider = (seo_cfg or {}).get("provider") if isinstance(seo_cfg, dict) else None
-                seo_model = (seo_cfg or {}).get("model") if isinstance(seo_cfg, dict) else None
-                seo_host = (seo_cfg or {}).get("host") if isinstance(seo_cfg, dict) else None
-                force_ai_title = bool((seo_cfg or {}).get("force_title_from_description", False)) if isinstance(seo_cfg, dict) else False
+                seo_provider = (
+                    (seo_cfg or {}).get("provider")
+                    if isinstance(seo_cfg, dict)
+                    else None
+                )
+                seo_model = (
+                    (seo_cfg or {}).get("model") if isinstance(seo_cfg, dict) else None
+                )
+                seo_host = (
+                    (seo_cfg or {}).get("host") if isinstance(seo_cfg, dict) else None
+                )
+                force_ai_title = (
+                    bool((seo_cfg or {}).get("force_title_from_description", False))
+                    if isinstance(seo_cfg, dict)
+                    else False
+                )
                 # Préférence par chat : surchage le YAML si présent
                 try:
-                    task_prefs = (task.get("prefs") or {}) if isinstance(task, dict) else {}
+                    task_prefs = (
+                        (task.get("prefs") or {}) if isinstance(task, dict) else {}
+                    )
                     if "ai_title_force" in task_prefs:
                         force_ai_title = bool(task_prefs.get("ai_title_force"))
                 except Exception:
@@ -459,8 +523,12 @@ def process_queue(*, queue_dir: str | Path, archive_dir: str | Path, config_path
 
                 # Règle spéciale Telegram: toujours affiner le titre et les tags à l'aide de l'IA,
                 # même s'ils existent déjà, pour les rendre plus percutants.
-                is_telegram = (task.get("source") == "telegram")
-                need_ai = is_telegram or force_ai_title or (not title or not description or not tags)
+                is_telegram = task.get("source") == "telegram"
+                need_ai = (
+                    is_telegram
+                    or force_ai_title
+                    or (not title or not description or not tags)
+                )
                 if need_ai:
                     req = MetaRequest(
                         # Si un titre existe, l'utiliser comme topic de base; sinon fallback sur le nom de fichier
@@ -476,20 +544,36 @@ def process_queue(*, queue_dir: str | Path, archive_dir: str | Path, config_path
                         provider=seo_provider,
                         # Ne définir model/host que pour Ollama. Pour OpenAI, laisser None pour que
                         # src.ai_generator choisisse OPENAI_MODEL ou sa valeur par défaut.
-                        model=(seo_model if ((seo_provider or "").lower() == "ollama") else None),
-                        host=(seo_host if ((seo_provider or "").lower() == "ollama") else None),
+                        model=(
+                            seo_model
+                            if ((seo_provider or "").lower() == "ollama")
+                            else None
+                        ),
+                        host=(
+                            seo_host
+                            if ((seo_provider or "").lower() == "ollama")
+                            else None
+                        ),
                         # Contexte: inclure titre + description s'ils existent pour guider la réécriture
-                        input_text=((f"Titre utilisateur: {title}\n\n" if title else "") + (description or "")) or None,
+                        input_text=(
+                            (f"Titre utilisateur: {title}\n\n" if title else "")
+                            + (description or "")
+                        )
+                        or None,
                     )
                     ai_meta = generate_metadata(
                         req,
-                        config_path=str(config_path) if config_path else "config/video.yaml",
+                        config_path=(
+                            str(config_path) if config_path else "config/video.yaml"
+                        ),
                         video_path=str(video_path),
                     )
 
                     # Si la tâche vient de Telegram: toujours remplacer titre et tags avec la version IA
                     if is_telegram:
-                        title = ai_meta.get("title") or (title or _default_title_for(video_path))
+                        title = ai_meta.get("title") or (
+                            title or _default_title_for(video_path)
+                        )
                         title = _clean_title(title)
                         tags = ai_meta.get("tags") or []
                         # Ne pas écraser la description utilisateur si elle existe; compléter seulement si absente
@@ -498,7 +582,9 @@ def process_queue(*, queue_dir: str | Path, archive_dir: str | Path, config_path
                     else:
                         # Cas standard: Titre: remplacer si force_ai_title, sinon seulement s'il manque
                         if force_ai_title or not title:
-                            title = ai_meta.get("title") or _default_title_for(video_path)
+                            title = ai_meta.get("title") or _default_title_for(
+                                video_path
+                            )
                             title = _clean_title(title)
                         # Description/Tags: compléter seulement si manquants
                         if not description:
@@ -510,7 +596,10 @@ def process_queue(*, queue_dir: str | Path, archive_dir: str | Path, config_path
                 else:
                     ai_generated_category = None
             except Exception as e:
-                log.warning("AI metadata non générées (%s), on complète avec des valeurs par défaut.", e)
+                log.warning(
+                    "AI metadata non générées (%s), on complète avec des valeurs par défaut.",
+                    e,
+                )
                 ai_generated_category = None
                 if not title:
                     title = _default_title_for(video_path)
@@ -521,32 +610,40 @@ def process_queue(*, queue_dir: str | Path, archive_dir: str | Path, config_path
 
             # Normaliser tags (unicité, minuscule)
             if tags:
-                tags = sorted({str(t).strip().lstrip('#').lower() for t in tags if str(t).strip()})
+                tags = sorted(
+                    {str(t).strip().lstrip("#").lower() for t in tags if str(t).strip()}
+                )
 
             # Obtenir les credentials YouTube avec gestion multi-comptes
             try:
                 # Charger la config brute pour lire multi_accounts (ne pas utiliser load_config qui normalise)
                 import yaml
+
                 raw_cfg_path = Path("config/video.yaml")
                 multi_accounts_enabled = False
                 if raw_cfg_path.exists():
                     try:
-                        raw_cfg = yaml.safe_load(raw_cfg_path.read_text(encoding="utf-8")) or {}
-                        multi_accounts_enabled = bool((raw_cfg.get("multi_accounts") or {}).get("enabled", False))
+                        raw_cfg = (
+                            yaml.safe_load(raw_cfg_path.read_text(encoding="utf-8"))
+                            or {}
+                        )
+                        multi_accounts_enabled = bool(
+                            (raw_cfg.get("multi_accounts") or {}).get("enabled", False)
+                        )
                     except Exception:
                         multi_accounts_enabled = False
-                
+
                 if multi_accounts_enabled:
                     # Utiliser le gestionnaire multi-comptes
                     manager = create_multi_account_manager()
-                    
+
                     # Obtenir le compte pour ce chat ou le meilleur compte disponible
                     chat_id = task.get("chat_id")
                     if chat_id:
                         account = manager.get_chat_account(str(chat_id))
                     else:
                         account = manager.get_best_account_for_upload()
-                    
+
                     if not account:
                         log.error("Aucun compte YouTube disponible pour upload")
                         # Marquer la tâche en erreur et archiver
@@ -556,14 +653,22 @@ def process_queue(*, queue_dir: str | Path, archive_dir: str | Path, config_path
                             _save_task(task_path, task)
                             archive_path = adir / task_path.name
                             shutil.move(str(task_path), str(archive_path))
-                            log.info(f"Tâche archivée (aucun compte disponible): {archive_path}")
+                            log.info(
+                                f"Tâche archivée (aucun compte disponible): {archive_path}"
+                            )
                         except Exception as _e:
-                            log.warning(f"Impossible d'archiver la tâche sans compte: {_e}")
+                            log.warning(
+                                f"Impossible d'archiver la tâche sans compte: {_e}"
+                            )
                         continue
-                    
-                    log.info(f"Utilisation du compte: {account.name} ({account.account_id})")
-                    credentials = manager.get_credentials_for_account(account.account_id)
-                    
+
+                    log.info(
+                        f"Utilisation du compte: {account.name} ({account.account_id})"
+                    )
+                    credentials = manager.get_credentials_for_account(
+                        account.account_id
+                    )
+
                     # Enregistrer l'utilisation du compte après upload réussi
                     upload_account_id = account.account_id
                 else:
@@ -571,46 +676,71 @@ def process_queue(*, queue_dir: str | Path, archive_dir: str | Path, config_path
                     _get_credentials = globals().get("get_credentials")
                     if not callable(_get_credentials):
                         from src.auth import get_credentials as _impl
+
                         _get_credentials = _impl
                     credentials = _get_credentials(
                         SCOPES,
                         client_secrets_path=DEFAULT_CLIENT_SECRETS,
-                        token_path=DEFAULT_TOKEN_FILE
+                        token_path=DEFAULT_TOKEN_FILE,
                     )
                     upload_account_id = None
-                    
+
             except Exception as e:
                 log.error(f"Erreur credentials YouTube: {e}")
                 return False
 
             # Champs additionnels YouTube
             cfg_lang = (cfg or {}).get("language") if isinstance(cfg, dict) else None
-            cfg_priv = (cfg or {}).get("privacy_status") if isinstance(cfg, dict) else None
+            cfg_priv = (
+                (cfg or {}).get("privacy_status") if isinstance(cfg, dict) else None
+            )
             cfg_cat = (cfg or {}).get("category_id") if isinstance(cfg, dict) else None
-            cfg_license = (cfg or {}).get("license") if isinstance(cfg, dict) else None  # "youtube" | "creativeCommon"
+            cfg_license = (
+                (cfg or {}).get("license") if isinstance(cfg, dict) else None
+            )  # "youtube" | "creativeCommon"
             cfg_emb = (cfg or {}).get("embeddable") if isinstance(cfg, dict) else None
-            cfg_public_stats = (cfg or {}).get("public_stats_viewable") if isinstance(cfg, dict) else None
-            cfg_default_audio_lang = (cfg or {}).get("default_audio_language") if isinstance(cfg, dict) else None
+            cfg_public_stats = (
+                (cfg or {}).get("public_stats_viewable")
+                if isinstance(cfg, dict)
+                else None
+            )
+            cfg_default_audio_lang = (
+                (cfg or {}).get("default_audio_language")
+                if isinstance(cfg, dict)
+                else None
+            )
 
             # Derivations à partir de la tâche
             task_meta = (task.get("meta") or {}) if isinstance(task, dict) else {}
             lang = task_meta.get("language") or cfg_lang or "fr"
-            privacy_status = (task.get("privacy_status")
-                              or task_meta.get("privacy_status")
-                              or cfg_priv or "private")
-            category_id = (task.get("category_id")
-                           or task_meta.get("category_id")
-                           or ai_generated_category
-                           or cfg_cat or 22)
-            made_for_kids = (task.get("made_for_kids")
-                             or task_meta.get("made_for_kids")
-                             or (cfg or {}).get("made_for_kids"))
+            privacy_status = (
+                task.get("privacy_status")
+                or task_meta.get("privacy_status")
+                or cfg_priv
+                or "private"
+            )
+            category_id = (
+                task.get("category_id")
+                or task_meta.get("category_id")
+                or ai_generated_category
+                or cfg_cat
+                or 22
+            )
+            made_for_kids = (
+                task.get("made_for_kids")
+                or task_meta.get("made_for_kids")
+                or (cfg or {}).get("made_for_kids")
+            )
             # Forcer made_for_kids à False par défaut
             if made_for_kids is None:
                 made_for_kids = False
 
             # Date d'enregistrement: utiliser received_at si présent
-            recording_date = (task.get("received_at") if isinstance(task.get("received_at"), str) else None)
+            recording_date = (
+                task.get("received_at")
+                if isinstance(task.get("received_at"), str)
+                else None
+            )
 
             # Génération automatique de thumbnail
             thumbnail_path = None
@@ -629,6 +759,7 @@ def process_queue(*, queue_dir: str | Path, archive_dir: str | Path, config_path
                 _upload_video = globals().get("upload_video")
                 if not callable(_upload_video):
                     from src.uploader import upload_video as _impl
+
                     _upload_video = _impl
                 resp = _upload_video(
                     credentials,
@@ -643,7 +774,9 @@ def process_queue(*, queue_dir: str | Path, archive_dir: str | Path, config_path
                     made_for_kids=made_for_kids,
                     embeddable=cfg_emb if cfg_emb is not None else True,
                     license=cfg_license or "youtube",
-                    public_stats_viewable=cfg_public_stats if cfg_public_stats is not None else True,
+                    public_stats_viewable=(
+                        cfg_public_stats if cfg_public_stats is not None else True
+                    ),
                     default_language=lang,
                     default_audio_language=cfg_default_audio_lang or lang,
                     recording_date=recording_date,
@@ -652,44 +785,58 @@ def process_queue(*, queue_dir: str | Path, archive_dir: str | Path, config_path
                 log.info("Upload réussi: video id=%s", vid)
             except Exception as e:
                 # Gestion spécifique uploadLimitExceeded (sans dépendre du type exact)
-                if "uploadLimitExceeded" in str(e) or "exceeded the number of videos" in str(e):
+                if "uploadLimitExceeded" in str(
+                    e
+                ) or "exceeded the number of videos" in str(e):
                     log.warning(f"Limite d'upload YouTube atteinte: {e}")
-                    
+
                     # Marquer la tâche comme bloquée
                     task["status"] = "blocked"
                     task["error"] = "uploadLimitExceeded"
-                    task["error_message"] = "Limite quotidienne YouTube atteinte. Réessayez dans 24h."
+                    task[
+                        "error_message"
+                    ] = "Limite quotidienne YouTube atteinte. Réessayez dans 24h."
                     task["blocked_at"] = datetime.now().isoformat()
-                    
+
                     # Sauvegarder la tâche bloquée
-                    task_path.write_text(json.dumps(task, ensure_ascii=False, indent=2), encoding="utf-8")
-                    
+                    task_path.write_text(
+                        json.dumps(task, ensure_ascii=False, indent=2), encoding="utf-8"
+                    )
+
                     # Archiver la tâche bloquée
                     archive_path = adir / task_path.name
                     shutil.move(str(task_path), str(archive_path))
-                    
+
                     log.info(f"Tâche marquée comme bloquée et archivée: {archive_path}")
-                    
+
                     # Arrêter le traitement des autres tâches pour éviter les échecs en cascade
-                    log.warning("Arrêt du worker pour éviter d'autres échecs uploadLimitExceeded")
+                    log.warning(
+                        "Arrêt du worker pour éviter d'autres échecs uploadLimitExceeded"
+                    )
                     return
                 else:
                     # Autres erreurs d'upload
                     raise
-            
+
             task["status"] = "done"
             task["youtube_id"] = vid
             _save_task(task_path, task)
 
             # Génération et upload de sous-titres (si activé)
-            subtitles_cfg = (cfg or {}).get("subtitles") if isinstance(cfg, dict) else None
+            subtitles_cfg = (
+                (cfg or {}).get("subtitles") if isinstance(cfg, dict) else None
+            )
             task_subtitles_enabled = task.get("subtitles_enabled", False)
-            config_subtitles_enabled = subtitles_cfg.get("enabled", False) if subtitles_cfg else False
-            
+            config_subtitles_enabled = (
+                subtitles_cfg.get("enabled", False) if subtitles_cfg else False
+            )
+
             # Activer si demandé dans la tâche OU dans la config
             if task_subtitles_enabled or config_subtitles_enabled:
                 try:
-                    _process_subtitles(credentials, vid, enhanced, subtitles_cfg or {}, task)
+                    _process_subtitles(
+                        credentials, vid, enhanced, subtitles_cfg or {}, task
+                    )
                 except Exception as e:
                     log.error("Erreur génération sous-titres pour %s: %s", vid, e)
                     # Ne pas faire échouer la tâche pour les sous-titres
@@ -697,7 +844,9 @@ def process_queue(*, queue_dir: str | Path, archive_dir: str | Path, config_path
                 try:
                     _save_task(task_path, task)
                 except Exception as _e:
-                    log.warning(f"Impossible de sauvegarder les infos de sous-titres: {_e}")
+                    log.warning(
+                        f"Impossible de sauvegarder les infos de sous-titres: {_e}"
+                    )
 
             # Enregistrer l'utilisation du quota si multi-comptes
             if upload_account_id:
@@ -717,7 +866,7 @@ def process_queue(*, queue_dir: str | Path, archive_dir: str | Path, config_path
             # Archive
             dest = adir / task_path.name
             shutil.move(str(task_path), str(dest))
-            
+
         except Exception as e:
             log.exception("Erreur inattendue sur %s: %s", task_path, e)
             try:

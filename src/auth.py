@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import json
 from pathlib import Path
 from typing import Iterable, Optional
 
@@ -65,7 +64,9 @@ def get_credentials(
                     "Fichier d'identifiants introuvable. Cherché: "
                     f"{Path(DEFAULT_CLIENT_SECRETS).resolve()} et {root_candidate.resolve()}"
                 )
-        flow = InstalledAppFlow.from_client_secrets_file(str(client_secrets_path), scopes)
+        flow = InstalledAppFlow.from_client_secrets_file(
+            str(client_secrets_path), scopes
+        )
         if headless:
             creds = flow.run_console()
         else:

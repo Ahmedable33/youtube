@@ -37,7 +37,9 @@ def load_config(path: str | Path) -> Dict[str, Any]:
     elif p.suffix.lower() == ".json":
         raw = json.loads(p.read_text(encoding="utf-8"))
     else:
-        raise ConfigError("Extension de configuration non supportée (utilisez .yaml/.yml ou .json)")
+        raise ConfigError(
+            "Extension de configuration non supportée (utilisez .yaml/.yml ou .json)"
+        )
 
     # Alias possibles (français et API)
     def take(*keys, default=None):
@@ -53,7 +55,9 @@ def load_config(path: str | Path) -> Dict[str, Any]:
         "description": take("description", "desc"),
         "tags": take("tags", default=[]) or [],
         "category_id": take("category_id", "categoryId", default=22),
-        "privacy_status": (take("privacy_status", "privacyStatus", default="private") or "private").lower(),
+        "privacy_status": (
+            take("privacy_status", "privacyStatus", default="private") or "private"
+        ).lower(),
         "publish_at": take("publish_at", "publishAt"),
         "made_for_kids": take("made_for_kids", "madeForKids"),
     }
@@ -108,20 +112,28 @@ def load_config(path: str | Path) -> Dict[str, Any]:
                 raise ConfigError("'enhance.quality' doit être une chaîne")
             allowed = {"low", "medium", "high", "youtube", "max"}
             if enhance_cfg["quality"] not in allowed:
-                raise ConfigError("'enhance.quality' doit être parmi: " + ", ".join(sorted(allowed)))
+                raise ConfigError(
+                    "'enhance.quality' doit être parmi: " + ", ".join(sorted(allowed))
+                )
         if "codec" in enhance_cfg:
             if not isinstance(enhance_cfg["codec"], str):
                 raise ConfigError("'enhance.codec' doit être une chaîne")
             allowedc = {"h264", "hevc", "vp9", "av1"}
             if enhance_cfg["codec"].lower() not in allowedc:
-                raise ConfigError("'enhance.codec' doit être parmi: " + ", ".join(sorted(allowedc)))
+                raise ConfigError(
+                    "'enhance.codec' doit être parmi: " + ", ".join(sorted(allowedc))
+                )
         if "hwaccel" in enhance_cfg:
             if not isinstance(enhance_cfg["hwaccel"], str):
                 raise ConfigError("'enhance.hwaccel' doit être une chaîne")
             allowedh = {"none", "auto", "videotoolbox"}
             if enhance_cfg["hwaccel"].lower() not in allowedh:
-                raise ConfigError("'enhance.hwaccel' doit être parmi: " + ", ".join(sorted(allowedh)))
-        if "fps" in enhance_cfg and not (isinstance(enhance_cfg["fps"], (int, float)) or enhance_cfg["fps"] is None):
+                raise ConfigError(
+                    "'enhance.hwaccel' doit être parmi: " + ", ".join(sorted(allowedh))
+                )
+        if "fps" in enhance_cfg and not (
+            isinstance(enhance_cfg["fps"], (int, float)) or enhance_cfg["fps"] is None
+        ):
             raise ConfigError("'enhance.fps' doit être un nombre")
         if "crf" in enhance_cfg and not isinstance(enhance_cfg["crf"], int):
             raise ConfigError("'enhance.crf' doit être un entier")
@@ -131,11 +143,17 @@ def load_config(path: str | Path) -> Dict[str, Any]:
             raise ConfigError("'enhance.deband' doit être booléen")
         if "deblock" in enhance_cfg and not isinstance(enhance_cfg["deblock"], bool):
             raise ConfigError("'enhance.deblock' doit être booléen")
-        if "sharpen_amount" in enhance_cfg and not isinstance(enhance_cfg["sharpen_amount"], (int, float)):
+        if "sharpen_amount" in enhance_cfg and not isinstance(
+            enhance_cfg["sharpen_amount"], (int, float)
+        ):
             raise ConfigError("'enhance.sharpen_amount' doit être un nombre (0.0-1.0)")
-        if "contrast" in enhance_cfg and not isinstance(enhance_cfg["contrast"], (int, float)):
+        if "contrast" in enhance_cfg and not isinstance(
+            enhance_cfg["contrast"], (int, float)
+        ):
             raise ConfigError("'enhance.contrast' doit être un nombre (ex: 1.07)")
-        if "saturation" in enhance_cfg and not isinstance(enhance_cfg["saturation"], (int, float)):
+        if "saturation" in enhance_cfg and not isinstance(
+            enhance_cfg["saturation"], (int, float)
+        ):
             raise ConfigError("'enhance.saturation' doit être un nombre (ex: 1.12)")
         # Pas d'autre validation stricte ici pour rester flexible
 
