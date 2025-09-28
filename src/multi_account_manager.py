@@ -94,7 +94,9 @@ class MultiAccountManager:
             self.chat_mappings = config.get("chat_mappings", {})
 
             log.info(
-                f"Configuration chargée: {len(self.accounts)} comptes, {len(self.chat_mappings)} mappings"
+                "Configuration chargée: %d comptes, %d mappings",
+                len(self.accounts),
+                len(self.chat_mappings),
             )
 
         except Exception as e:
@@ -118,7 +120,8 @@ class MultiAccountManager:
             ],
             "chat_mappings": {},
             "load_balancing": {
-                "strategy": "round_robin",  # round_robin, least_used, quota_based
+                # strategies: round_robin, least_used, quota_based
+                "strategy": "round_robin",
                 "auto_switch": True,
                 "fallback_enabled": True,
             },
@@ -140,7 +143,10 @@ class MultiAccountManager:
         """Sauvegarder la configuration"""
         try:
             config = {
-                "accounts": [account.to_dict() for account in self.accounts.values()],
+                "accounts": [
+                    account.to_dict()
+                    for account in self.accounts.values()
+                ],
                 "chat_mappings": self.chat_mappings,
                 "load_balancing": {
                     "strategy": "quota_based",
@@ -169,8 +175,12 @@ class MultiAccountManager:
             today = datetime.now().strftime("%Y-%m-%d")
 
             for account_id, usage_data in data.items():
-                if usage_data.get("date") == today:  # Seulement les données du jour
-                    self.quota_usage[account_id] = QuotaUsage.from_dict(usage_data)
+                if (
+                    usage_data.get("date") == today
+                ):  # Seulement les données du jour
+                    self.quota_usage[account_id] = QuotaUsage.from_dict(
+                        usage_data
+                    )
 
         except Exception as e:
             log.error(f"Erreur chargement quotas: {e}")
@@ -196,7 +206,8 @@ class MultiAccountManager:
             # Vérifier que les fichiers de credentials existent
             if not Path(account.credentials_path).exists():
                 log.error(
-                    f"Fichier credentials introuvable: {account.credentials_path}"
+                    "Fichier credentials introuvable: %s",
+                    account.credentials_path,
                 )
                 return False
 
@@ -263,7 +274,11 @@ class MultiAccountManager:
 
     def get_best_account_for_upload(self) -> Optional[YouTubeAccount]:
         """Sélectionner le meilleur compte pour un upload (load balancing)"""
-        available_accounts = [acc for acc in self.accounts.values() if acc.enabled]
+        available_accounts = [
+            acc
+            for acc in self.accounts.values()
+            if acc.enabled
+        ]
 
         if not available_accounts:
             log.error("Aucun compte disponible pour upload")
@@ -297,7 +312,9 @@ class MultiAccountManager:
             if uploads_used >= account.daily_upload_limit:
                 score = 0.0  # Compte saturé
 
-            account_scores.append((account, score, uploads_used, api_calls_used))
+            account_scores.append(
+                (account, score, uploads_used, api_calls_used)
+            )
 
         # Trier par score décroissant
         account_scores.sort(key=lambda x: x[1], reverse=True)
@@ -306,11 +323,15 @@ class MultiAccountManager:
         best_score = account_scores[0][1]
 
         if best_score <= 0:
-            log.warning("Tous les comptes ont atteint leurs limites quotidiennes")
+            log.warning(
+                "Tous les comptes ont atteint leurs limites quotidiennes"
+            )
             return None
 
         log.info(
-            f"Compte sélectionné pour upload: {best_account.name} (score: {best_score:.2f})"
+            "Compte sélectionné pour upload: %s (score: %.2f)",
+            best_account.name,
+            best_score,
         )
         return best_account
 
@@ -319,7 +340,10 @@ class MultiAccountManager:
         today = datetime.now().strftime("%Y-%m-%d")
 
         if account_id not in self.quota_usage:
-            self.quota_usage[account_id] = QuotaUsage(account_id=account_id, date=today)
+            self.quota_usage[account_id] = QuotaUsage(
+                account_id=account_id,
+                date=today,
+            )
 
         usage = self.quota_usage[account_id]
 
@@ -337,7 +361,10 @@ class MultiAccountManager:
         self._save_quota_usage()
 
         log.info(
-            f"Upload enregistré pour {account_id}: {usage.uploads}/{self.accounts[account_id].daily_upload_limit} uploads"
+            "Upload enregistré pour %s: %d/%d uploads",
+            account_id,
+            usage.uploads,
+            self.accounts[account_id].daily_upload_limit,
         )
 
     def get_account_status(self, account_id: str) -> Dict:
@@ -364,17 +391,26 @@ class MultiAccountManager:
             "enabled": account.enabled,
             "uploads_used": uploads_used,
             "uploads_limit": account.daily_upload_limit,
-            "uploads_remaining": max(0, account.daily_upload_limit - uploads_used),
+            "uploads_remaining": max(
+                0,
+                account.daily_upload_limit - uploads_used),
             "api_calls_used": api_calls_used,
             "api_calls_limit": account.daily_quota_limit,
-            "quota_percentage": (api_calls_used / account.daily_quota_limit) * 100,
+            "quota_percentage": (
+                (api_calls_used / account.daily_quota_limit) * 100
+            ),
             "last_upload": last_upload.isoformat() if last_upload else None,
-            "can_upload": uploads_used < account.daily_upload_limit and account.enabled,
+            "can_upload": (
+                uploads_used < account.daily_upload_limit and account.enabled
+            ),
         }
 
     def get_all_accounts_status(self) -> List[Dict]:
         """Obtenir le statut de tous les comptes"""
-        return [self.get_account_status(acc_id) for acc_id in self.accounts.keys()]
+        return [
+            self.get_account_status(acc_id)
+            for acc_id in self.accounts.keys()
+        ]
 
     def get_credentials_for_account(
         self,
@@ -407,7 +443,11 @@ class MultiAccountManager:
                 headless=headless,
             )
         except Exception as e:
-            log.error(f"Erreur récupération credentials pour {account_id}: {e}")
+            log.error(
+                "Erreur récupération credentials pour %s: %s",
+                account_id,
+                e,
+            )
             raise
 
     def cleanup_old_quota_data(self):
@@ -416,7 +456,9 @@ class MultiAccountManager:
 
         # Supprimer les données qui ne sont pas d'aujourd'hui
         old_accounts = [
-            acc_id for acc_id, usage in self.quota_usage.items() if usage.date != today
+            acc_id
+            for acc_id, usage in self.quota_usage.items()
+            if usage.date != today
         ]
 
         for acc_id in old_accounts:
@@ -425,7 +467,8 @@ class MultiAccountManager:
         if old_accounts:
             self._save_quota_usage()
             log.info(
-                f"Nettoyage: {len(old_accounts)} anciennes données de quota supprimées"
+                "Nettoyage: %d anciennes données de quota supprimées",
+                len(old_accounts),
             )
 
 
