@@ -1,4 +1,3 @@
-from pathlib import Path
 import yaml
 
 import main as cli
@@ -21,7 +20,9 @@ def test_cli_upload_integration(monkeypatch, tmp_path, capsys):
         "enhance": {"enabled": False},
     }
     cfg_path = tmp_path / "video.yaml"
-    cfg_path.write_text(yaml.safe_dump(cfg, allow_unicode=True, sort_keys=False), encoding="utf-8")
+    cfg_path.write_text(
+        yaml.safe_dump(cfg, allow_unicode=True, sort_keys=False), encoding="utf-8"
+    )
 
     # Stub credentials and YouTube service
     monkeypatch.setattr(cli, "get_credentials", lambda *a, **k: object())
@@ -29,6 +30,7 @@ def test_cli_upload_integration(monkeypatch, tmp_path, capsys):
     class FakeRequest:
         def __init__(self):
             self._done = False
+
         def next_chunk(self):
             if not self._done:
                 self._done = True
@@ -46,21 +48,27 @@ def test_cli_upload_integration(monkeypatch, tmp_path, capsys):
             class _E:
                 def execute(self):
                     return {}
+
             return _E()
 
     class FakeService:
         def videos(self):
             return FakeVideos()
+
         def thumbnails(self):
             return FakeThumbs()
 
     monkeypatch.setattr(uploader, "_build_service", lambda credentials: FakeService())
 
-    rc = cli.main([
-        "upload",
-        "--config", str(cfg_path),
-        "--log-level", "INFO",
-    ])
+    rc = cli.main(
+        [
+            "upload",
+            "--config",
+            str(cfg_path),
+            "--log-level",
+            "INFO",
+        ]
+    )
     assert rc == 0
     out = capsys.readouterr().out
     assert "Video ID: abc123" in out
