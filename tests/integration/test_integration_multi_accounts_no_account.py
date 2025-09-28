@@ -36,17 +36,17 @@ def test_worker_multi_accounts_no_account_archives_error(monkeypatch, tmp_path: 
             pass
 
     ga_http.MediaFileUpload = _StubMediaFileUpload
-    sys.modules['googleapiclient'] = ga
-    sys.modules['googleapiclient.discovery'] = ga_discovery
-    sys.modules['googleapiclient.errors'] = ga_errors
-    sys.modules['googleapiclient.http'] = ga_http
+    sys.modules["googleapiclient"] = ga
+    sys.modules["googleapiclient.discovery"] = ga_discovery
+    sys.modules["googleapiclient.errors"] = ga_errors
+    sys.modules["googleapiclient.http"] = ga_http
 
     from src import worker
 
     # Force multi-accounts enabled via fake yaml module
     fake_yaml = types.ModuleType("yaml")
     fake_yaml.safe_load = lambda _text: {"multi_accounts": {"enabled": True}}
-    monkeypatch.setitem(sys.modules, 'yaml', fake_yaml)
+    monkeypatch.setitem(sys.modules, "yaml", fake_yaml)
 
     # Fake manager that returns no account
     class _FakeManager:
