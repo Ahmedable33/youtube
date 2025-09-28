@@ -14,7 +14,7 @@ jobs:
     env:
       MIN_DESCRIPTION_LEN: "20"
       MAX_CHANGED_FILES: "60"
-      MAX_TOTAL_CHANGES: "1500"  # additions + deletions
+      MAX_TOTAL_CHANGES: "3000"  # additions + deletions
       ALLOW_OVERRIDE_LABEL: "skip-pr-size-check"
     steps:
       - name: Validate PR metadata and size
