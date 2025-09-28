@@ -6,7 +6,10 @@ from src.scheduler import UploadScheduler, ScheduleStatus
 
 def test_scheduler_defaults_and_optimal_slot(tmp_path: Path):
     sched_dir = tmp_path / "schedule"
-    us = UploadScheduler(config_path=tmp_path / "video.yaml", schedule_dir=sched_dir)
+    us = UploadScheduler(
+        config_path=tmp_path / "video.yaml",
+        schedule_dir=sched_dir,
+    )
 
     # time_slots should be created and saved
     assert us.slots_file.exists()
@@ -20,7 +23,10 @@ def test_scheduler_defaults_and_optimal_slot(tmp_path: Path):
 
 def test_schedule_and_ready_tasks(tmp_path: Path):
     sched_dir = tmp_path / "schedule"
-    us = UploadScheduler(config_path=tmp_path / "video.yaml", schedule_dir=sched_dir)
+    us = UploadScheduler(
+        config_path=tmp_path / "video.yaml",
+        schedule_dir=sched_dir,
+    )
 
     # create dummy task file path
     task_file = tmp_path / "task_001.json"
@@ -31,7 +37,9 @@ def test_schedule_and_ready_tasks(tmp_path: Path):
     assert st.status == ScheduleStatus.SCHEDULED
 
     # move time forward to mark ready
-    ready_list = us.get_ready_tasks(current_time=st.scheduled_time + timedelta(minutes=5))
+    ready_list = us.get_ready_tasks(
+        current_time=st.scheduled_time + timedelta(minutes=5)
+    )
     assert any(t.task_id == st.task_id for t in ready_list)
     # persist updated status
     assert us.schedule_file.exists()

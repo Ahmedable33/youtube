@@ -155,7 +155,9 @@ def enhance_video(
 
     # Vérifier ffmpeg
     if not shutil.which("ffmpeg"):
-        raise EnhanceError("ffmpeg introuvable dans le PATH. Installez-le (ex: brew install ffmpeg)")
+        raise EnhanceError(
+            "ffmpeg introuvable dans le PATH. Installez-le (ex: brew install ffmpeg)"
+        )
 
     out_path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -187,7 +189,11 @@ def enhance_video(
 
     # Sharpen (unsharp): légère à forte selon sharpen_amount
     if sharpen or (sharpen_amount is not None):
-        amt = 0.8 if sharpen_amount is None else max(0.0, min(1.5, float(sharpen_amount) * 1.5))
+        amt = (
+            0.8
+            if sharpen_amount is None
+            else max(0.0, min(1.5, float(sharpen_amount) * 1.5))
+        )
         vf_parts.append(f"unsharp=5:5:{amt}:5:5:0.0")
 
     # Correction colorimétrique
@@ -228,7 +234,12 @@ def enhance_video(
                 auto_br = _default_bitrate_for_height(target_h, "h264")
                 cmd += ["-b:v", auto_br]
         else:
-            cmd += ["-c:v", "libx264", "-preset", preset if preset in _PRESET_CHOICES else "medium"]
+            cmd += [
+                "-c:v",
+                "libx264",
+                "-preset",
+                preset if preset in _PRESET_CHOICES else "medium",
+            ]
             if bitrate:
                 cmd += ["-b:v", bitrate, "-maxrate", bitrate, "-bufsize", "2M"]
             else:
@@ -246,7 +257,12 @@ def enhance_video(
             cmd += ["-tag:v", "hvc1"]
         else:
             # H.265/HEVC
-            cmd += ["-c:v", "libx265", "-preset", preset if preset in _PRESET_CHOICES else "medium"]
+            cmd += [
+                "-c:v",
+                "libx265",
+                "-preset",
+                preset if preset in _PRESET_CHOICES else "medium",
+            ]
             if bitrate:
                 cmd += ["-b:v", bitrate]
             else:
@@ -351,7 +367,12 @@ def enhance_video(
                 if now - last_log >= 1.0:
                     rem = max(0.0, total_seconds - cur)
                     # ETA approximatif (en sec) faute de vitesse instantanée
-                    log.info("Progression ffmpeg: %.1f%% (t=%s, ETA~%.0fs)", pct, mt.group(0)[5:], rem)
+                    log.info(
+                        "Progression ffmpeg: %.1f%% (t=%s, ETA~%.0fs)",
+                        pct,
+                        mt.group(0)[5:],
+                        rem,
+                    )
                     last_log = now
 
         stdout_data = proc.stdout.read() if proc.stdout else ""

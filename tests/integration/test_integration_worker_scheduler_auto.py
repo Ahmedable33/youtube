@@ -10,10 +10,10 @@ def test_worker_auto_schedules_not_upload(monkeypatch, tmp_path: Path):
     ga_discovery = types.ModuleType("googleapiclient.discovery")
     ga_errors = types.ModuleType("googleapiclient.errors")
     ga_http = types.ModuleType("googleapiclient.http")
-    sys.modules['googleapiclient'] = ga
-    sys.modules['googleapiclient.discovery'] = ga_discovery
-    sys.modules['googleapiclient.errors'] = ga_errors
-    sys.modules['googleapiclient.http'] = ga_http
+    sys.modules["googleapiclient"] = ga
+    sys.modules["googleapiclient.discovery"] = ga_discovery
+    sys.modules["googleapiclient.errors"] = ga_errors
+    sys.modules["googleapiclient.http"] = ga_http
 
     from src import worker
     from src.scheduler import UploadScheduler
@@ -59,9 +59,11 @@ def test_worker_auto_schedules_not_upload(monkeypatch, tmp_path: Path):
     # Spy on UploadScheduler.schedule_task
     scheduled = {}
     orig_schedule_task = UploadScheduler.schedule_task
+
     def spy_schedule(self, task_path_arg, scheduled_time=None, preferred_days=None):
         scheduled["called_with"] = str(task_path_arg)
         return orig_schedule_task(self, task_path_arg, scheduled_time, preferred_days)
+
     monkeypatch.setattr(UploadScheduler, "schedule_task", spy_schedule)
 
     # Run worker
@@ -74,7 +76,9 @@ def test_worker_auto_schedules_not_upload(monkeypatch, tmp_path: Path):
 
     # The task should be moved to archive as 'scheduled_*.json' is created by scheduler and original removed
     archived = archive_dir / task_path.name
-    assert archived.exists(), "Original task should be moved to archive after scheduling"
+    assert (
+        archived.exists()
+    ), "Original task should be moved to archive after scheduling"
     assert "called_with" in scheduled
 
     # Check that a scheduled_tasks.json exists and has at least one entry
