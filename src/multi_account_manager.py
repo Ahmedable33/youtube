@@ -10,7 +10,6 @@ from pathlib import Path
 from typing import Dict, List, Optional, Iterable
 from dataclasses import dataclass, asdict
 
-from .auth import get_credentials
 
 log = logging.getLogger(__name__)
 
@@ -436,7 +435,10 @@ class MultiAccountManager:
             ]
 
         try:
-            return get_credentials(
+            # Import paresseux pour éviter les dépendances lourdes au temps d'import du module
+            from .auth import get_credentials as _get_credentials
+
+            return _get_credentials(
                 scopes,
                 client_secrets_path=account.credentials_path,
                 token_path=account.token_path,
