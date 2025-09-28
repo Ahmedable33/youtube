@@ -309,7 +309,7 @@ async def _handle_video(
     title_from_caption: Optional[str] = None
     desc_from_caption: Optional[str] = None
     if caption:
-        lines = [l.strip() for l in caption.splitlines() if l.strip()]
+        lines = [line.strip() for line in caption.splitlines() if line.strip()]
         if len(lines) == 1:
             title_from_caption = lines[0]
         elif len(lines) > 1:
@@ -355,7 +355,8 @@ async def _video_handler(
         log.exception("Erreur lors du traitement de la vidéo: %s", e)
         if update.message:
             await update.message.reply_text(
-                "❌ Erreur lors du traitement de la vidéo (peut-être un timeout réseau). Réessayez ou envoyez un fichier plus petit."
+                "❌ Erreur lors du traitement de la vidéo (peut-être un timeout réseau). "
+                "Réessayez ou envoyez un fichier plus petit."
             )
 
 
@@ -373,8 +374,15 @@ def _main_menu_keyboard() -> InlineKeyboardMarkup:
 
         config = load_config("config/video.yaml")
         multi_accounts_enabled = config.get("multi_accounts", {}).get("enabled", False)
-    except:
+    except Exception:
         pass
+
+    # Valeurs par défaut affichées dans le menu principal (sans contexte de chat)
+    current_quality = "medium"
+    current_privacy = "private"
+    category_name = "People & Blogs"
+    subtitles_enabled = False
+    schedule_mode = "now"
 
     # Boutons persistants
     keyboard = [
@@ -560,11 +568,11 @@ def build_application(cfg: TelegramConfig) -> Application:
                 cur_desc = meta.get("description")
                 await msg.reply_text(
                     "✅ Métadonnées IA mises à jour.\n\n"
-                    + f"Titre:\n{meta.get('title','')}\n\n"
+                    + f"Titre:\n{meta.get('title', '')}\n\n"
                     + (
                         f"Description (inchangée):\n{cur_desc}\n\n"
                         if cur_desc
-                        else f"Description (IA):\n{meta.get('description','')}\n\n"
+                        else f"Description (IA):\n{meta.get('description', '')}\n\n"
                     )
                     + f"Tags: {', '.join(meta.get('tags') or [])}"
                 )
@@ -578,7 +586,8 @@ def build_application(cfg: TelegramConfig) -> Application:
         if txt.lower().startswith("chapters help"):
             await msg.reply_text(
                 "Envoyez /chapters suivi de vos lignes de chapitres, une par ligne, au format:\n"
-                "00:00 Intro\n00:45 Sujet 1\n01:30 Sujet 2\n\nExemple:\n/chapters\n00:00 Introduction\n00:30 Démo\n02:10 Astuces"
+                "00:00 Intro\n00:45 Sujet 1\n01:30 Sujet 2\n\n"
+                "Exemple:\n/chapters\n00:00 Introduction\n00:30 Démo\n02:10 Astuces"
             )
             return
         if txt.lower().startswith("quality:"):
@@ -671,7 +680,8 @@ def build_application(cfg: TelegramConfig) -> Application:
                 )
             else:
                 await msg.reply_text(
-                    "Catégorie invalide. Utilisez: gaming, education, entertainment, music, tech, news, sports, comedy, howto, people"
+                    "Catégorie invalide. Utilisez: gaming, education, entertainment, music, tech, news,\n"
+                    "sports, comedy, howto, people"
                 )
         if txt.lower().startswith("subtitles:"):
             setting = txt.split(":", 1)[1].strip().lower()
@@ -1035,7 +1045,7 @@ def build_application(cfg: TelegramConfig) -> Application:
 
                     dt = datetime.fromisoformat(custom_time)
                     schedule_text = f"programmé pour {dt.strftime('%d/%m/%Y à %H:%M')}"
-                except:
+                except Exception:
                     schedule_text = "programmé (heure invalide)"
             else:
                 schedule_text = "programmé"
@@ -1063,7 +1073,7 @@ def build_application(cfg: TelegramConfig) -> Application:
                 account = manager.get_chat_account(str(chat_id))
                 if account:
                     current_account = account.name
-        except:
+        except Exception:
             pass
 
         seo_status = (
@@ -1218,16 +1228,14 @@ def build_application(cfg: TelegramConfig) -> Application:
         # Filtrer les lignes avec timestamp
         lines = []
         for line in chapters_text.splitlines():
-            l = line.strip()
-            if not l:
+            line_text = line.strip()
+            if not line_text:
                 continue
             # Valider un timestamp simple mm:ss ou hh:mm:ss au début de ligne
-            import re
-
-            if re.match(r"^(\d{1,2}:)?\d{1,2}:\d{2}\s+.+", l) or re.match(
-                r"^\d{1,2}:\d{2}\s+.+", l
+            if re.match(r"^(\d{1,2}:)?\d{1,2}:\d{2}\s+.+", line_text) or re.match(
+                r"^\d{1,2}:\d{2}\s+.+", line_text
             ):
-                lines.append(l)
+                lines.append(line_text)
         if not lines:
             await msg.reply_text(
                 "Aucun chapitre valide détecté (format mm:ss Titre ou hh:mm:ss Titre)."
@@ -1428,7 +1436,9 @@ def build_application(cfg: TelegramConfig) -> Application:
 
         if category_name not in category_map:
             await msg.reply_text(
-                "Catégorie invalide. Utilisez: gaming, education, entertainment, music, tech, news, sports, comedy, howto, people"
+                "Catégorie invalide. Utilisez: "
+                "gaming, education, entertainment, music, tech, news, sports, "
+                "comedy, how to, people, blogs"
             )
             return
 

@@ -124,7 +124,7 @@ class TaskMonitor:
                 )
                 if (now - received_at).total_seconds() < 86400:  # 24h
                     recent_tasks.append(task)
-            except:
+            except Exception:
                 pass
 
         return {

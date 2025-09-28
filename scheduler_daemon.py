@@ -11,7 +11,7 @@ from pathlib import Path
 # Ajouter le répertoire src au path pour les imports
 sys.path.insert(0, str(Path(__file__).parent / "src"))
 
-from src.scheduled_worker import run_scheduled_worker
+from src.scheduled_worker import run_scheduled_worker  # noqa: E402
 
 
 def main():

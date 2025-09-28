@@ -55,7 +55,6 @@ class VisionAnalyzer:
         "workout": 17,
         "howto": 26,
         "diy": 26,
-        "tutorial": 26,
         "guide": 26,
         "recipe": 26,
         "cooking": 26,
@@ -209,11 +208,11 @@ class VisionAnalyzer:
             for fp in frame_paths:
                 try:
                     fp.unlink()
-                except:
+                except Exception:
                     pass
             try:
                 temp_dir.rmdir()
-            except:
+            except Exception:
                 pass
             raise e
 
@@ -259,12 +258,13 @@ class VisionAnalyzer:
 
             # Prompt pour l'analyse
             prompt = """Analyze these video frames and provide a JSON response with:
-1. "content_type": main category (gaming, education, music, entertainment, technology, sports, etc.)
-2. "tags": list of relevant tags (max 10)
-3. "description": brief description of what you see
-4. "confidence": confidence score 0-1
+1. \"content_type\": main category (gaming, education, music, entertainment, technology, sports, etc.)
+2. \"tags\": list of relevant tags (max 10)
+3. \"description\": brief description of what you see
+4. \"confidence\": confidence score 0-1
 
-Focus on identifying the main subject, activity, and visual elements that would help categorize this content for YouTube."""
+Focus on identifying the main subject, activity, and visual elements
+that would help categorize this content for YouTube."""
 
             messages = [
                 {"role": "user", "content": [{"type": "text", "text": prompt}, *images]}
@@ -493,20 +493,19 @@ Focus on identifying the main subject and activity shown."""
             for frame_path in frame_paths:
                 try:
                     frame_path.unlink()
-                except:
+                except Exception:
                     pass
 
             # Nettoyer le répertoire temporaire
             try:
                 frame_paths[0].parent.rmdir()
-            except:
+            except Exception:
                 pass
 
 
 def create_vision_analyzer(config: Dict) -> Optional[VisionAnalyzer]:
     """
     Créer un analyseur vision basé sur la configuration
-
     Args:
         config: Configuration vision depuis video.yaml
 

@@ -678,7 +678,7 @@ def _safe_json_loads(text: str) -> Dict[str, Any]:
     start = t.find("{")
     end = t.rfind("}")
     if start != -1 and end != -1 and end > start:
-        t = t[start : end + 1]
+        t = t[start : end + 1]  # noqa: E203
     try:
         return json.loads(t)
     except Exception:

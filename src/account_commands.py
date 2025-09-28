@@ -41,7 +41,6 @@ async def cmd_accounts(update: Update, context: ContextTypes.DEFAULT_TYPE):
         for status in accounts_status:
             account_id = status["account_id"]
             name = status["name"]
-            enabled = status["enabled"]
             uploads_used = status["uploads_used"]
             uploads_limit = status["uploads_limit"]
             quota_percentage = status["quota_percentage"]

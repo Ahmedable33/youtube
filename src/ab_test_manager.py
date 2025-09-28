@@ -347,7 +347,7 @@ class ABTestManager:
             return
 
         # Vérifier si on a assez de données pour une conclusion statistique
-        total_views = sum(metrics.views for metrics.views in test.metrics.values())
+        total_views = sum(m.views for m in test.metrics.values())
         if total_views >= 1000:  # Seuil minimum pour analyse
             winner, confidence = self._calculate_winner(test)
             if confidence >= 0.95:  # 95% de confiance

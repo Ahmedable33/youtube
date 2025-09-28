@@ -42,6 +42,11 @@ def generate_thumbnail(
         output_path.parent.mkdir(parents=True, exist_ok=True)
 
         # Commande ffmpeg pour extraire une frame
+        # Construire l'expression de filtre sur plusieurs lignes pour respecter la longueur maximale
+        filter_expr = (
+            f"scale={width}:{height}:force_original_aspect_ratio=decrease,"
+            f"pad={width}:{height}:(ow-iw)/2:(oh-ih)/2:black"
+        )
         cmd = [
             "ffmpeg",
             "-y",  # Overwrite output
@@ -52,7 +57,7 @@ def generate_thumbnail(
             "-vframes",
             "1",  # Extract 1 frame
             "-vf",
-            f"scale={width}:{height}:force_original_aspect_ratio=decrease,pad={width}:{height}:(ow-iw)/2:(oh-ih)/2:black",
+            filter_expr,
             "-q:v",
             str(quality),  # JPEG quality
             str(output_path),
