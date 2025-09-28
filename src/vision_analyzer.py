@@ -212,11 +212,11 @@ class VisionAnalyzer:
             for fp in frame_paths:
                 try:
                     fp.unlink()
-                except Exception:
+                except:
                     pass
             try:
                 temp_dir.rmdir()
-            except Exception:
+            except:
                 pass
             raise e
 
