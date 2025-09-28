@@ -35,16 +35,22 @@ def _make_task(queue_dir: Path, chat_id: int, video_path: Path, meta: dict):
         "meta": meta,
     }
     task_path = queue_dir / f"task_test_{chat_id}.json"
-    task_path.write_text(json.dumps(task, ensure_ascii=False, indent=2), encoding="utf-8")
+    task_path.write_text(
+        json.dumps(task, ensure_ascii=False, indent=2), encoding="utf-8"
+    )
 
     # Write last pointer
-    (queue_dir / f"last_task_{chat_id}.json").write_text(json.dumps({"task_path": str(task_path)}), encoding="utf-8")
+    (queue_dir / f"last_task_{chat_id}.json").write_text(
+        json.dumps({"task_path": str(task_path)}), encoding="utf-8"
+    )
 
     return task_path
 
 
 @pytest.mark.parametrize("has_desc", [False, True])
-def test_ai_regenerate_title_tags_updates_meta(tmp_path: Path, monkeypatch, has_desc: bool):
+def test_ai_regenerate_title_tags_updates_meta(
+    tmp_path: Path, monkeypatch, has_desc: bool
+):
     # Prepare config file (minimal SEO Ollama)
     cfg_path = tmp_path / "video.yaml"
     cfg_path.write_text(
@@ -103,4 +109,6 @@ seo:
 
 def test_ai_regenerate_title_tags_errors_when_no_task(tmp_path: Path):
     with pytest.raises(RuntimeError):
-        tg.ai_regenerate_title_tags(tmp_path / "queue", 42, config_path=str(tmp_path / "video.yaml"))
+        tg.ai_regenerate_title_tags(
+            tmp_path / "queue", 42, config_path=str(tmp_path / "video.yaml")
+        )
