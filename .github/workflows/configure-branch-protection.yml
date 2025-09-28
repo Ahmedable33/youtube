@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       approvals:
-        description: "Number of required PR approvals (1 or 2)"
+        description: "Number of required PR approvals (0, 1 or 2)"
         type: choice
         options: ["0", "1", "2"]
         default: "0"
