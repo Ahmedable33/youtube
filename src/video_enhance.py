@@ -374,8 +374,7 @@ def enhance_video(
                         rem,
                     )
                     last_log = now
-
-        stdout_data = proc.stdout.read() if proc.stdout else ""
+        proc.stdout.read() if proc.stdout else ""
         ret = proc.wait()
         if ret != 0:
             raise EnhanceError("ffmpeg a échoué:\n" + "\n".join(tail))

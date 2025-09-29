@@ -10,28 +10,37 @@ def test_multi_accounts_e2e(monkeypatch, tmp_path: Path):
     ga_discovery = types.ModuleType("googleapiclient.discovery")
     ga_errors = types.ModuleType("googleapiclient.errors")
     ga_http = types.ModuleType("googleapiclient.http")
+
     class _StubResumableUploadError(Exception):
         pass
+
     ga_errors.ResumableUploadError = _StubResumableUploadError
+
     class _StubHttpError(Exception):
         def __init__(self, *args, **kwargs):
             self.resp = types.SimpleNamespace(status=403)
             super().__init__(*args)
+
     ga_errors.HttpError = _StubHttpError
+
     # Stubs required by src.uploader import
     def _stub_build(*args, **kwargs):
         class _Svc:
             pass
+
         return _Svc()
+
     ga_discovery.build = _stub_build
+
     class _StubMediaFileUpload:
         def __init__(self, *args, **kwargs):
             pass
+
     ga_http.MediaFileUpload = _StubMediaFileUpload
-    sys.modules['googleapiclient'] = ga
-    sys.modules['googleapiclient.discovery'] = ga_discovery
-    sys.modules['googleapiclient.errors'] = ga_errors
-    sys.modules['googleapiclient.http'] = ga_http
+    sys.modules["googleapiclient"] = ga
+    sys.modules["googleapiclient.discovery"] = ga_discovery
+    sys.modules["googleapiclient.errors"] = ga_errors
+    sys.modules["googleapiclient.http"] = ga_http
 
     from src import worker
 
@@ -77,14 +86,18 @@ def test_multi_accounts_e2e(monkeypatch, tmp_path: Path):
     class FakeManager:
         def __init__(self):
             self._recorded = []
+
         def get_chat_account(self, chat_id):
             assert chat_id == "chat-42"
             return FakeAccount("acc-main", "Compte Principal")
+
         def get_best_account_for_upload(self):
             return FakeAccount("acc-main", "Compte Principal")
+
         def get_credentials_for_account(self, account_id):
             assert account_id == "acc-main"
             return object()
+
         def record_upload(self, account_id, api_calls_used):
             self._recorded.append((account_id, api_calls_used))
 
@@ -108,7 +121,7 @@ def test_multi_accounts_e2e(monkeypatch, tmp_path: Path):
     # Ensure inline `import yaml` inside worker sees multi_accounts enabled
     fake_yaml = types.ModuleType("yaml")
     fake_yaml.safe_load = lambda _text: {"multi_accounts": {"enabled": True}}
-    monkeypatch.setitem(sys.modules, 'yaml', fake_yaml)
+    monkeypatch.setitem(sys.modules, "yaml", fake_yaml)
 
     # Run worker
     worker.process_queue(

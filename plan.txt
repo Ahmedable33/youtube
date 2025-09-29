@@ -8,7 +8,7 @@ Voici les améliorations que je te propose, classées par priorité et facilité
 - **Solution** : Détecter l'erreur, marquer tâche "blocked", pause 24h
 - **Impact** : Évite les boucles d'échec, meilleure UX
 
-### **2. Bouton "Upload maintenant"** 
+### **2. Bouton "Upload maintenant"**
 - **Fonction** : Skip amélioration ffmpeg, upload direct
 - **Usage** : Vidéos déjà optimisées ou tests rapides
 - **Implémentation** : Nouveau bouton + flag `skip_enhance`
@@ -59,14 +59,14 @@ Voici les améliorations que je te propose, classées par priorité et facilité
 **Effort** : 15 min
 **Impact** : Stabilité production
 
-### **#2 - Bouton "Upload maintenant"** ⭐⭐⭐  
+### **#2 - Bouton "Upload maintenant"** ⭐⭐⭐
 **Pourquoi** : Flexibilité, tests rapides, vidéos pré-optimisées
 **Effort** : 20 min
 **Impact** : UX améliorée
 
 ### **#3 - Commande `/category`** ⭐⭐
 **Pourquoi** : Complète privacy/quality, catégories importantes SEO
-**Effort** : 15 min  
+**Effort** : 15 min
 **Impact** : Meilleur référencement
 
 ## **Laquelle t'intéresse le plus ?**

@@ -11,12 +11,12 @@ Ce système permet de gérer plusieurs chaînes YouTube avec load balancing auto
 multi_accounts:
   enabled: true  # Activer la gestion multi-comptes
   config_path: "config/multi_accounts.json"
-  
+
   load_balancing:
     strategy: "quota_based"  # quota_based, round_robin, least_used
     auto_switch: true
     fallback_enabled: true
-  
+
   default_limits:
     daily_quota_limit: 10000
     daily_upload_limit: 6
@@ -225,7 +225,7 @@ Quand multi-comptes activé, un bouton "👤 Account" apparaît dans le menu pri
 ```json
 {
   "gaming": "Contenu gaming",
-  "tech": "Reviews tech", 
+  "tech": "Reviews tech",
   "lifestyle": "Vlogs lifestyle"
 }
 ```

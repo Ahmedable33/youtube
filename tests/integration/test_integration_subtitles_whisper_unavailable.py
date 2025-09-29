@@ -10,27 +10,36 @@ def test_worker_subtitles_whisper_unavailable(monkeypatch, tmp_path: Path):
     ga_discovery = types.ModuleType("googleapiclient.discovery")
     ga_errors = types.ModuleType("googleapiclient.errors")
     ga_http = types.ModuleType("googleapiclient.http")
+
     class _StubResumableUploadError(Exception):
         pass
+
     ga_errors.ResumableUploadError = _StubResumableUploadError
+
     class _StubHttpError(Exception):
         def __init__(self, *args, **kwargs):
             self.resp = types.SimpleNamespace(status=403)
             super().__init__(*args)
+
     ga_errors.HttpError = _StubHttpError
+
     def _stub_build(*args, **kwargs):
         class _Svc:
             pass
+
         return _Svc()
+
     ga_discovery.build = _stub_build
+
     class _StubMediaFileUpload:
         def __init__(self, *args, **kwargs):
             pass
+
     ga_http.MediaFileUpload = _StubMediaFileUpload
-    sys.modules['googleapiclient'] = ga
-    sys.modules['googleapiclient.discovery'] = ga_discovery
-    sys.modules['googleapiclient.errors'] = ga_errors
-    sys.modules['googleapiclient.http'] = ga_http
+    sys.modules["googleapiclient"] = ga
+    sys.modules["googleapiclient.discovery"] = ga_discovery
+    sys.modules["googleapiclient.errors"] = ga_errors
+    sys.modules["googleapiclient.http"] = ga_http
 
     from src import worker
 
@@ -76,7 +85,9 @@ def test_worker_subtitles_whisper_unavailable(monkeypatch, tmp_path: Path):
 
     # Monkeypatch creds, upload, and make whisper unavailable
     monkeypatch.setattr(worker, "get_credentials", lambda *a, **k: object())
-    monkeypatch.setattr(worker, "upload_video", lambda *a, **k: {"id": "vid_no_whisper"})
+    monkeypatch.setattr(
+        worker, "upload_video", lambda *a, **k: {"id": "vid_no_whisper"}
+    )
     monkeypatch.setattr(worker, "is_whisper_available", lambda: False)
 
     worker.process_queue(
