@@ -48,9 +48,9 @@ pip list | grep -q pytest || {
 check_result $? "Dépendances CI"
 echo ""
 
-# 3. Linting avec flake8
+# 3. Linting avec flake8 (utilise la config du projet)
 echo "🔎 Linting avec flake8..."
-flake8 src/ tests/ --max-line-length=88 --extend-ignore=E203,W503 2>&1
+flake8 src/ tests/ --max-line-length=160 --extend-ignore=E203,W503 2>&1
 FLAKE8_EXIT=$?
 check_result $FLAKE8_EXIT "Flake8 linting"
 echo ""
