@@ -156,7 +156,7 @@ def test_generate_placeholder_thumbnail_no_pillow(tmp_path):
     # On mock au niveau module pour que l'import dans _generate_placeholder_thumbnail échoue
     mock_pil = MagicMock()
     mock_pil.Image.new.side_effect = ImportError("No module named 'PIL'")
-    
+
     with patch.dict("sys.modules", {"PIL": mock_pil, "PIL.Image": mock_pil.Image}):
         result = worker._generate_placeholder_thumbnail(output_path)
 
@@ -174,7 +174,7 @@ def test_generate_placeholder_thumbnail_pillow_error(tmp_path):
     # Mock PIL avec une erreur lors de la sauvegarde
     mock_image = MagicMock()
     mock_image.save = MagicMock(side_effect=Exception("Save failed"))
-    
+
     mock_pil = MagicMock()
     mock_pil.Image.new.return_value = mock_image
     mock_pil.ImageDraw.Draw.return_value = MagicMock()

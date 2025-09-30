@@ -246,7 +246,7 @@ def test_worker_thumbnail_always_generated(tmp_path: Path, monkeypatch):
 
 def test_worker_vision_category_when_enabled(tmp_path: Path, monkeypatch):
     """Test E2E: Vision (Ollama) détecte automatiquement category_id si activée
-    
+
     NOTE: Ce test vérifie que si vision est activée, le worker tentera de l'utiliser.
     Le test complet avec mock de VisionAnalyzer est complexe car l'import est dynamique.
     """
@@ -279,7 +279,7 @@ def test_worker_vision_category_when_enabled(tmp_path: Path, monkeypatch):
 
     # Config avec vision activée (en YAML)
     import yaml
-    
+
     cfg = {
         "privacy_status": "private",
         "language": "fr",
