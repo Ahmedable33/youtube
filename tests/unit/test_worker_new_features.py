@@ -1,4 +1,5 @@
 """Tests unitaires pour les nouvelles fonctionnalités du worker"""
+
 from pathlib import Path
 import importlib
 import types
@@ -105,9 +106,7 @@ def test_probe_audio_language_timeout():
     fake_video = Path("/tmp/test_video.mp4")
 
     # Mock subprocess.run pour lever TimeoutExpired
-    with patch(
-        "subprocess.run", side_effect=subprocess.TimeoutExpired("ffprobe", 10)
-    ):
+    with patch("subprocess.run", side_effect=subprocess.TimeoutExpired("ffprobe", 10)):
         lang = worker._probe_audio_language(fake_video)
 
         # Timeout doit être géré et retourner None
@@ -137,7 +136,15 @@ def test_generate_placeholder_thumbnail_success(tmp_path):
     mock_pil.ImageDraw.Draw.return_value = mock_draw
     mock_pil.ImageFont.load_default.return_value = MagicMock()
 
-    with patch.dict("sys.modules", {"PIL": mock_pil, "PIL.Image": mock_pil.Image, "PIL.ImageDraw": mock_pil.ImageDraw, "PIL.ImageFont": mock_pil.ImageFont}):
+    with patch.dict(
+        "sys.modules",
+        {
+            "PIL": mock_pil,
+            "PIL.Image": mock_pil.Image,
+            "PIL.ImageDraw": mock_pil.ImageDraw,
+            "PIL.ImageFont": mock_pil.ImageFont,
+        },
+    ):
         result = worker._generate_placeholder_thumbnail(output_path)
 
         assert result is True
@@ -180,7 +187,15 @@ def test_generate_placeholder_thumbnail_pillow_error(tmp_path):
     mock_pil.ImageDraw.Draw.return_value = MagicMock()
     mock_pil.ImageFont.load_default.return_value = MagicMock()
 
-    with patch.dict("sys.modules", {"PIL": mock_pil, "PIL.Image": mock_pil.Image, "PIL.ImageDraw": mock_pil.ImageDraw, "PIL.ImageFont": mock_pil.ImageFont}):
+    with patch.dict(
+        "sys.modules",
+        {
+            "PIL": mock_pil,
+            "PIL.Image": mock_pil.Image,
+            "PIL.ImageDraw": mock_pil.ImageDraw,
+            "PIL.ImageFont": mock_pil.ImageFont,
+        },
+    ):
         result = worker._generate_placeholder_thumbnail(output_path)
 
         assert result is False

@@ -1,4 +1,5 @@
 """Tests d'intégration pour les nouveaux comportements par défaut du worker"""
+
 from pathlib import Path
 import json
 import sys
@@ -213,9 +214,7 @@ def test_worker_thumbnail_always_generated(tmp_path: Path, monkeypatch):
     monkeypatch.setattr(worker, "get_credentials", lambda *a, **k: object())
     monkeypatch.setattr(worker, "get_best_thumbnail", mock_get_best_thumbnail)
     monkeypatch.setattr(worker, "upload_video", mock_upload)
-    monkeypatch.setattr(
-        worker, "_generate_placeholder_thumbnail", mock_placeholder
-    )
+    monkeypatch.setattr(worker, "_generate_placeholder_thumbnail", mock_placeholder)
 
     with patch("subprocess.run", side_effect=mock_subprocess_run):
         # Run worker
@@ -343,9 +342,7 @@ def test_worker_vision_category_when_enabled(tmp_path: Path, monkeypatch):
     # Stubs et mocks
     monkeypatch.setattr(worker, "get_credentials", lambda *a, **k: object())
     monkeypatch.setattr(worker, "get_best_thumbnail", lambda *a, **k: None)
-    monkeypatch.setattr(
-        worker, "_generate_placeholder_thumbnail", lambda *a, **k: True
-    )
+    monkeypatch.setattr(worker, "_generate_placeholder_thumbnail", lambda *a, **k: True)
     monkeypatch.setattr(worker, "upload_video", mock_upload)
 
     # Mock create_vision_analyzer dans le module worker où il est importé dynamiquement
@@ -366,7 +363,10 @@ def test_worker_vision_category_when_enabled(tmp_path: Path, monkeypatch):
     # Vérifier que category_id=20 (Gaming) a été détecté et utilisé
     # NOTE: Dans l'env de test, le mock peut ne pas fonctionner (import dynamique)
     # On accepte 20 (vision) ou 22 (default) comme valide
-    assert upload_called["category_id"] in [20, 22], f"category_id devrait être 20 (vision) ou 22 (défaut), got {upload_called['category_id']}"
+    assert upload_called["category_id"] in [
+        20,
+        22,
+    ], f"category_id devrait être 20 (vision) ou 22 (défaut), got {upload_called['category_id']}"
 
     # Vérifier succès
     archived = archive_dir / task_path.name
@@ -459,9 +459,7 @@ def test_worker_audio_language_detection(tmp_path: Path, monkeypatch):
     # Stubs et mocks
     monkeypatch.setattr(worker, "get_credentials", lambda *a, **k: object())
     monkeypatch.setattr(worker, "get_best_thumbnail", lambda *a, **k: None)
-    monkeypatch.setattr(
-        worker, "_generate_placeholder_thumbnail", lambda *a, **k: True
-    )
+    monkeypatch.setattr(worker, "_generate_placeholder_thumbnail", lambda *a, **k: True)
     monkeypatch.setattr(worker, "upload_video", mock_upload)
 
     with patch("subprocess.run", side_effect=mock_subprocess_run):

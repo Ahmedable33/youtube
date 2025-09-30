@@ -142,10 +142,7 @@ class MultiAccountManager:
         """Sauvegarder la configuration"""
         try:
             config = {
-                "accounts": [
-                    account.to_dict()
-                    for account in self.accounts.values()
-                ],
+                "accounts": [account.to_dict() for account in self.accounts.values()],
                 "chat_mappings": self.chat_mappings,
                 "load_balancing": {
                     "strategy": "quota_based",
@@ -174,12 +171,8 @@ class MultiAccountManager:
             today = datetime.now().strftime("%Y-%m-%d")
 
             for account_id, usage_data in data.items():
-                if (
-                    usage_data.get("date") == today
-                ):  # Seulement les données du jour
-                    self.quota_usage[account_id] = QuotaUsage.from_dict(
-                        usage_data
-                    )
+                if usage_data.get("date") == today:  # Seulement les données du jour
+                    self.quota_usage[account_id] = QuotaUsage.from_dict(usage_data)
 
         except Exception as e:
             log.error(f"Erreur chargement quotas: {e}")
@@ -273,11 +266,7 @@ class MultiAccountManager:
 
     def get_best_account_for_upload(self) -> Optional[YouTubeAccount]:
         """Sélectionner le meilleur compte pour un upload (load balancing)"""
-        available_accounts = [
-            acc
-            for acc in self.accounts.values()
-            if acc.enabled
-        ]
+        available_accounts = [acc for acc in self.accounts.values() if acc.enabled]
 
         if not available_accounts:
             log.error("Aucun compte disponible pour upload")
@@ -311,9 +300,7 @@ class MultiAccountManager:
             if uploads_used >= account.daily_upload_limit:
                 score = 0.0  # Compte saturé
 
-            account_scores.append(
-                (account, score, uploads_used, api_calls_used)
-            )
+            account_scores.append((account, score, uploads_used, api_calls_used))
 
         # Trier par score décroissant
         account_scores.sort(key=lambda x: x[1], reverse=True)
@@ -322,9 +309,7 @@ class MultiAccountManager:
         best_score = account_scores[0][1]
 
         if best_score <= 0:
-            log.warning(
-                "Tous les comptes ont atteint leurs limites quotidiennes"
-            )
+            log.warning("Tous les comptes ont atteint leurs limites quotidiennes")
             return None
 
         log.info(
@@ -390,14 +375,10 @@ class MultiAccountManager:
             "enabled": account.enabled,
             "uploads_used": uploads_used,
             "uploads_limit": account.daily_upload_limit,
-            "uploads_remaining": max(
-                0,
-                account.daily_upload_limit - uploads_used),
+            "uploads_remaining": max(0, account.daily_upload_limit - uploads_used),
             "api_calls_used": api_calls_used,
             "api_calls_limit": account.daily_quota_limit,
-            "quota_percentage": (
-                (api_calls_used / account.daily_quota_limit) * 100
-            ),
+            "quota_percentage": ((api_calls_used / account.daily_quota_limit) * 100),
             "last_upload": last_upload.isoformat() if last_upload else None,
             "can_upload": (
                 uploads_used < account.daily_upload_limit and account.enabled
@@ -406,10 +387,7 @@ class MultiAccountManager:
 
     def get_all_accounts_status(self) -> List[Dict]:
         """Obtenir le statut de tous les comptes"""
-        return [
-            self.get_account_status(acc_id)
-            for acc_id in self.accounts.keys()
-        ]
+        return [self.get_account_status(acc_id) for acc_id in self.accounts.keys()]
 
     def get_credentials_for_account(
         self,
@@ -458,9 +436,7 @@ class MultiAccountManager:
 
         # Supprimer les données qui ne sont pas d'aujourd'hui
         old_accounts = [
-            acc_id
-            for acc_id, usage in self.quota_usage.items()
-            if usage.date != today
+            acc_id for acc_id, usage in self.quota_usage.items() if usage.date != today
         ]
 
         for acc_id in old_accounts:
