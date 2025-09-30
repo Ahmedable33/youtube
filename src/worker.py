@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import logging
 import shutil
+import subprocess
 from datetime import datetime
 import re
 from pathlib import Path
@@ -291,6 +292,78 @@ def _process_subtitles(
 
 def _default_title_for(video_path: Path) -> str:
     return video_path.stem.replace("_", " ")[:90]
+
+
+def _probe_audio_language(video_path: Path) -> Optional[str]:
+    """Détecte la langue audio via ffprobe (métadonnées stream).
+
+    Returns:
+        Code langue ISO (ex: 'fr', 'en') ou None
+    """
+    try:
+        cmd = [
+            "ffprobe",
+            "-v",
+            "error",
+            "-select_streams",
+            "a:0",
+            "-show_entries",
+            "stream_tags=language",
+            "-of",
+            "default=nk=1:nw=1",
+            str(video_path),
+        ]
+        res = subprocess.run(cmd, capture_output=True, text=True, timeout=10)
+        if res.returncode == 0:
+            lang = (res.stdout or "").strip().lower()
+            if lang and lang != "und":
+                return lang
+    except Exception as e:
+        log.debug("ffprobe audio language detection failed: %s", e)
+    return None
+
+
+def _generate_placeholder_thumbnail(
+    output_path: Path, width: int = 1280, height: int = 720
+) -> bool:
+    """Génère un placeholder thumbnail (image noire + texte) si tout échoue.
+
+    Returns:
+        True si réussi, False si Pillow non disponible
+    """
+    try:
+        from PIL import Image, ImageDraw, ImageFont
+
+        img = Image.new("RGB", (width, height), color="black")
+        draw = ImageDraw.Draw(img)
+
+        try:
+            # Essayer d'utiliser une fonte par défaut
+            font = ImageFont.truetype(
+                "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 48
+            )
+        except Exception:
+            font = ImageFont.load_default()
+
+        text = "Video Thumbnail"
+        # Centrer le texte
+        bbox = draw.textbbox((0, 0), text, font=font)
+        text_width = bbox[2] - bbox[0]
+        text_height = bbox[3] - bbox[1]
+        position = ((width - text_width) // 2, (height - text_height) // 2)
+
+        draw.text(position, text, fill="white", font=font)
+
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        img.save(str(output_path), "JPEG", quality=85)
+        log.info("Placeholder thumbnail générée: %s", output_path)
+        return True
+    except ImportError:
+        log.warning("Pillow non disponible, impossible de créer placeholder thumbnail")
+        return False
+    except Exception as e:
+        log.error("Erreur génération placeholder thumbnail: %s", e)
+        return False
 
 
 def _handle_scheduled_task(
@@ -717,15 +790,33 @@ def process_queue(
                 task.get("privacy_status")
                 or task_meta.get("privacy_status")
                 or cfg_priv
-                or "private"
+                or "public"
             )
-            category_id = (
-                task.get("category_id")
-                or task_meta.get("category_id")
-                or ai_generated_category
-                or cfg_cat
-                or 22
-            )
+
+            # Brancher Vision (Ollama) pour catégorie si activée et aucune catégorie fournie
+            user_category = task.get("category_id") or task_meta.get("category_id")
+            if not user_category:
+                vision_cfg = (
+                    (cfg or {}).get("vision") if isinstance(cfg, dict) else None
+                )
+                if vision_cfg and vision_cfg.get("enabled"):
+                    try:
+                        from src.vision_analyzer import create_vision_analyzer
+
+                        analyzer = create_vision_analyzer(vision_cfg)
+                        if analyzer:
+                            log.info("Analyse vision pour déterminer la catégorie...")
+                            analysis = analyzer.analyze_video(
+                                Path(enhanced), num_frames=3
+                            )
+                            vision_cat = analysis.get("category_id")
+                            if vision_cat is not None:
+                                ai_generated_category = vision_cat
+                                log.info("Catégorie Vision détectée: %s", vision_cat)
+                    except Exception as ve:
+                        log.warning("Échec analyse Vision pour catégorie: %s", ve)
+
+            category_id = user_category or ai_generated_category or cfg_cat or 22
             made_for_kids = (
                 task.get("made_for_kids")
                 or task_meta.get("made_for_kids")
@@ -742,18 +833,57 @@ def process_queue(
                 else None
             )
 
-            # Génération automatique de thumbnail
+            # Génération automatique de thumbnail (INFAILLIBLE)
             thumbnail_path = None
+            thumb_output = enhanced.parent / f"{enhanced.stem}_thumb.jpg"
+
+            # Niveau 1: get_best_thumbnail (frame 30% ou 5s)
             try:
-                thumb_output = enhanced.parent / f"{enhanced.stem}_thumb.jpg"
                 generated_thumb = get_best_thumbnail(enhanced, thumb_output)
                 if generated_thumb and generated_thumb.exists():
                     thumbnail_path = str(generated_thumb)
-                    log.info(f"Thumbnail générée: {thumbnail_path}")
-                else:
-                    log.warning("Échec génération thumbnail automatique")
+                    log.info("Thumbnail générée (best): %s", thumbnail_path)
             except Exception as e:
-                log.warning(f"Erreur génération thumbnail: {e}")
+                log.warning("Échec get_best_thumbnail: %s", e)
+
+            # Niveau 2: fallback ffmpeg frame simple (1s)
+            if not thumbnail_path:
+                try:
+                    cmd = [
+                        "ffmpeg",
+                        "-y",
+                        "-v",
+                        "error",
+                        "-ss",
+                        "00:00:01",
+                        "-i",
+                        str(enhanced),
+                        "-vframes",
+                        "1",
+                        "-q:v",
+                        "2",
+                        str(thumb_output),
+                    ]
+                    res = subprocess.run(
+                        cmd, capture_output=True, text=True, timeout=30
+                    )
+                    if res.returncode == 0 and thumb_output.exists():
+                        thumbnail_path = str(thumb_output)
+                        log.info(
+                            "Thumbnail générée (ffmpeg fallback): %s", thumbnail_path
+                        )
+                    else:
+                        log.warning("Échec ffmpeg fallback: %s", res.stderr)
+                except Exception as e:
+                    log.warning("Erreur ffmpeg fallback: %s", e)
+
+            # Niveau 3: placeholder (Pillow) - TOUJOURS réussit si Pillow disponible
+            if not thumbnail_path:
+                log.warning("Génération placeholder thumbnail (dernière tentative)...")
+                if _generate_placeholder_thumbnail(thumb_output):
+                    thumbnail_path = str(thumb_output)
+                else:
+                    log.error("IMPOSSIBLE de générer une miniature (même placeholder)")
 
             try:
                 _upload_video = globals().get("upload_video")
@@ -778,7 +908,11 @@ def process_queue(
                         cfg_public_stats if cfg_public_stats is not None else True
                     ),
                     default_language=lang,
-                    default_audio_language=cfg_default_audio_lang or lang,
+                    default_audio_language=(
+                        cfg_default_audio_lang
+                        or _probe_audio_language(enhanced)
+                        or lang
+                    ),
                     recording_date=recording_date,
                 )
                 vid = resp.get("id")
