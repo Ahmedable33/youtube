@@ -74,3 +74,16 @@ Voici les améliorations que je te propose, classées par priorité et facilité
 Je peux implémenter n'importe laquelle rapidement. La **gestion uploadLimitExceeded** serait la plus utile vu que tu l'as déjà rencontrée, mais le **bouton "Upload maintenant"** ajouterait beaucoup de flexibilité.
 
 Dis-moi ton choix et je l'implémente tout de suite !
+
+
+
+
+
+
+-le choix du playlist
+-ok avant le commencement de la tache dans le bot
+-reverifier si les bouton marche bien
+-optimiser l'heures optimales
+-docker
+-monitoring
+-securiter
