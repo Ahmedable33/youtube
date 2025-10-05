@@ -6,6 +6,7 @@ Intègre les tendances YouTube, analyse de concurrence et suggestions SEO
 import logging
 import json
 import re
+import os
 from datetime import datetime
 from pathlib import Path
 from typing import List, Dict, Optional
@@ -694,9 +695,16 @@ def create_seo_optimizer(config: Dict) -> Optional[SEOOptimizer]:
     if not config.get("enabled", False):
         return None
 
-    youtube_api_key = config.get("youtube_api_key")
+    # Priorité: config, puis variables d'env (SEO_YOUTUBE_API_KEY, YOUTUBE_DATA_API_KEY)
+    youtube_api_key = (
+        config.get("youtube_api_key")
+        or os.environ.get("SEO_YOUTUBE_API_KEY")
+        or os.environ.get("YOUTUBE_DATA_API_KEY")
+    )
     if not youtube_api_key:
-        log.warning("Clé API YouTube manquante pour l'optimiseur SEO")
+        log.warning(
+            "Clé API YouTube manquante pour l'optimiseur SEO (config.youtube_api_key ou SEO_YOUTUBE_API_KEY/YOUTUBE_DATA_API_KEY)"
+        )
         return None
 
     try:
