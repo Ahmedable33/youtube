@@ -160,7 +160,7 @@ def upload_video(
     if recording_date:
         recording_date = _to_rfc3339_utc(recording_date) or recording_date
 
-    # Sanitize tags (trim, drop vides, limiter à 20)
+    # Sanitize tags (trim, drop vides)
     san_tags: list[str] = []
     if tags:
         for t in list(tags):
@@ -169,10 +169,7 @@ def upload_video(
             tt = str(t).strip()
             if not tt:
                 continue
-            # Limiter la longueur d'un tag individuel à 100
-            san_tags.append(tt[:100])
-            if len(san_tags) >= 20:
-                break
+            san_tags.append(tt)
 
     body = {
         "snippet": {
