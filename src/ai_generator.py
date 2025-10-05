@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 from .config_loader import load_config
 from .vision_analyzer import create_vision_analyzer
 from .seo_optimizer import create_seo_optimizer
@@ -238,6 +239,65 @@ def _apply_seo_suggestions(metadata: dict, suggestions: List) -> dict:
                     current_tags.append(tag)
 
             metadata["tags"] = current_tags
+
+    # Appliquer automatiquement les améliorations de description (mots-clés + CTA)
+    try:
+        desc = metadata.get("description", "") or ""
+
+        # 1) Intégrer des mots-clés tendance proposés pour la description
+        trending_from_desc: List[str] = []
+        for s in suggestions:
+            if (
+                getattr(s, "confidence", 0) >= 0.7
+                and getattr(s, "type", "") == "description"
+            ):
+                kws = getattr(s, "trending_keywords", []) or []
+                for kw in kws:
+                    if kw and kw not in trending_from_desc:
+                        trending_from_desc.append(kw)
+
+        if trending_from_desc:
+            # Ne pas dupliquer des mots déjà présents
+            desc_lower = desc.lower()
+            to_add = [
+                kw for kw in trending_from_desc if kw.lower() not in desc_lower
+            ][:5]
+            if to_add:
+                # Ajouter en fin de description pour rester naturel
+                if "Mots-clés:" not in desc:
+                    desc += ("\n\n" if desc else "") + "Mots-clés: " + ", ".join(to_add)
+                else:
+                    # Fusion simple: ajouter seulement ceux absents
+                    existing_line_idx = desc.find("Mots-clés:")
+                    if existing_line_idx != -1:
+                        existing_segment = desc[
+                            existing_line_idx : existing_line_idx + 200
+                        ]  # noqa: E203
+                        for kw in to_add:
+                            if kw.lower() not in existing_segment.lower():
+                                desc += ", " + kw
+        # 2) Ajouter un CTA s'il n'est pas déjà présent
+        cta_patterns = [
+            r"abonnez?[-\s]vous",
+            r"\blike\b",
+            r"partag",
+            r"commentaire",
+            r"cloche",
+            r"subscribe",
+            r"\bbell\b",
+            r"share",
+            r"comment",
+        ]
+        has_cta = any(re.search(p, desc, flags=re.IGNORECASE) for p in cta_patterns)
+        if not has_cta:
+            desc += (
+                "\n\n" if desc else ""
+            ) + "Abonnez-vous, likez et partagez pour soutenir la chaîne !"
+
+        metadata["description"] = desc
+    except Exception:
+        # Ne bloque pas si une suggestion inattendue provoque une erreur
+        pass
 
     return metadata
 
