@@ -21,7 +21,6 @@ from src.subtitle_generator import (
 from .thumbnail_generator import get_best_thumbnail
 from .multi_account_manager import create_multi_account_manager
 
-
 log = logging.getLogger("worker")
 
 SCOPES = [
@@ -109,6 +108,42 @@ def _clean_title(title: str) -> str:
             s = s[1:-1].strip()
             break
     return s
+
+
+def _to_rfc3339_utc_from_dt(dt: datetime) -> str:
+    """Convertit un datetime timezone-aware en RFC3339 UTC '...Z' sans microsecondes."""
+    if dt.tzinfo is None:
+        from datetime import timezone as _tz
+
+        dt = dt.replace(tzinfo=_tz.utc)
+    else:
+        from datetime import timezone as _tz
+        dt = dt.astimezone(_tz.utc)
+    return dt.replace(microsecond=0).isoformat().replace("+00:00", "Z")
+
+
+def _add_video_to_playlist(credentials, video_id: str, playlist_id: str, position: Optional[int] = None) -> None:
+    """Ajoute la vidéo à une playlist YouTube si un playlist_id est fourni."""
+    try:
+        from googleapiclient.discovery import build  # type: ignore
+    except Exception as e:
+        log.warning("googleapiclient indisponible, ajout playlist ignoré: %s", e)
+        return
+
+    try:
+        service = build("youtube", "v3", credentials=credentials)
+        body = {
+            "snippet": {
+                "playlistId": str(playlist_id),
+                "resourceId": {"kind": "youtube#video", "videoId": video_id},
+            }
+        }
+        if position is not None:
+            body["snippet"]["position"] = int(position)
+        service.playlistItems().insert(part="snippet", body=body).execute()
+        log.info("Vidéo %s ajoutée à la playlist %s", video_id, playlist_id)
+    except Exception as e:
+        log.error("Échec ajout vidéo %s à la playlist %s: %s", video_id, playlist_id, e)
 
 
 def _read_tasks(queue_dir: Path) -> list[Path]:
@@ -681,11 +716,15 @@ def process_queue(
                 if not tags:
                     tags = []
 
-            # Normaliser tags (unicité, minuscule)
+            # Normaliser tags (unicité, minuscule) – pas de limitation stricte
             if tags:
                 tags = sorted(
                     {str(t).strip().lstrip("#").lower() for t in tags if str(t).strip()}
                 )
+
+            # Titre/description: seulement un défaut si vide, pas de troncature
+            if not title or not str(title).strip():
+                title = _default_title_for(video_path)
 
             # Obtenir les credentials YouTube avec gestion multi-comptes
             try:
@@ -817,6 +856,29 @@ def process_queue(
                         log.warning("Échec analyse Vision pour catégorie: %s", ve)
 
             category_id = user_category or ai_generated_category or cfg_cat or 22
+            # Validation categoryId
+            valid_categories = {
+                "1",
+                "2",
+                "10",
+                "15",
+                "17",
+                "19",
+                "20",
+                "22",
+                "23",
+                "24",
+                "25",
+                "26",
+                "27",
+                "28",
+            }
+            try:
+                if str(category_id) not in valid_categories:
+                    log.warning("categoryId invalide %s, fallback 22", category_id)
+                    category_id = 22
+            except Exception:
+                category_id = 22
             made_for_kids = (
                 task.get("made_for_kids")
                 or task_meta.get("made_for_kids")
@@ -891,6 +953,27 @@ def process_queue(
                     from src.uploader import upload_video as _impl
 
                     _upload_video = _impl
+                # Déterminer publish_at final
+                task_publish_at = (
+                    task.get("publish_at")
+                    or (
+                        task_meta.get("publish_at")
+                        if isinstance(task_meta, dict)
+                        else None
+                    )
+                    or (
+                        (cfg or {}).get("publish_at") if isinstance(cfg, dict) else None
+                    )
+                )
+                publish_at_final = task_publish_at
+                if (privacy_status or "").lower() == "private" and not publish_at_final:
+                    try:
+                        slot_dt = scheduler.find_next_optimal_slot()
+                        publish_at_final = _to_rfc3339_utc_from_dt(slot_dt)
+                        log.info("publishAt auto fixé: %s", publish_at_final)
+                    except Exception as e:
+                        log.warning("Auto planification publishAt échouée: %s", e)
+
                 resp = _upload_video(
                     credentials,
                     video_path=str(enhanced),
@@ -899,7 +982,7 @@ def process_queue(
                     tags=tags,
                     category_id=category_id,
                     privacy_status=privacy_status,
-                    publish_at=(cfg or {}).get("publish_at"),
+                    publish_at=publish_at_final,
                     thumbnail_path=thumbnail_path or (cfg or {}).get("thumbnail_path"),
                     made_for_kids=made_for_kids,
                     embeddable=cfg_emb if cfg_emb is not None else True,
@@ -917,6 +1000,21 @@ def process_queue(
                 )
                 vid = resp.get("id")
                 log.info("Upload réussi: video id=%s", vid)
+                # Ajout éventuel à une playlist si demandée
+                try:
+                    playlist_id = (
+                        task.get("playlist_id")
+                        or task_meta.get("playlist_id")
+                        or (
+                            (cfg or {}).get("playlist_id")
+                            if isinstance(cfg, dict)
+                            else None
+                        )
+                    )
+                    if playlist_id:
+                        _add_video_to_playlist(credentials, vid, str(playlist_id))
+                except Exception as e:
+                    log.error("Erreur ajout à la playlist: %s", e)
             except Exception as e:
                 # Gestion spécifique uploadLimitExceeded (sans dépendre du type exact)
                 if "uploadLimitExceeded" in str(
@@ -927,9 +1025,9 @@ def process_queue(
                     # Marquer la tâche comme bloquée
                     task["status"] = "blocked"
                     task["error"] = "uploadLimitExceeded"
-                    task["error_message"] = (
-                        "Limite quotidienne YouTube atteinte. Réessayez dans 24h."
-                    )
+                    task[
+                        "error_message"
+                    ] = "Limite quotidienne YouTube atteinte. Réessayez dans 24h."
                     task["blocked_at"] = datetime.now().isoformat()
 
                     # Sauvegarder la tâche bloquée

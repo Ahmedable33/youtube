@@ -39,3 +39,8 @@ inputs/
 queue/
 queue_archive/
 FILE.mp4
+
+# Coverage artifacts
+.coverage
+coverage.xml
+htmlcov/
