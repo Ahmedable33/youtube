@@ -20,7 +20,6 @@ from src.subtitle_generator import (
 )
 from .thumbnail_generator import get_best_thumbnail
 from .multi_account_manager import create_multi_account_manager
-from googleapiclient.discovery import build
 
 log = logging.getLogger("worker")
 
@@ -119,15 +118,18 @@ def _to_rfc3339_utc_from_dt(dt: datetime) -> str:
         dt = dt.replace(tzinfo=_tz.utc)
     else:
         from datetime import timezone as _tz
-
         dt = dt.astimezone(_tz.utc)
     return dt.replace(microsecond=0).isoformat().replace("+00:00", "Z")
 
 
-def _add_video_to_playlist(
-    credentials, video_id: str, playlist_id: str, position: Optional[int] = None
-) -> None:
+def _add_video_to_playlist(credentials, video_id: str, playlist_id: str, position: Optional[int] = None) -> None:
     """Ajoute la vidéo à une playlist YouTube si un playlist_id est fourni."""
+    try:
+        from googleapiclient.discovery import build  # type: ignore
+    except Exception as e:
+        log.warning("googleapiclient indisponible, ajout playlist ignoré: %s", e)
+        return
+
     try:
         service = build("youtube", "v3", credentials=credentials)
         body = {
