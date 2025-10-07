@@ -6,6 +6,7 @@ Intègre les tendances YouTube, analyse de concurrence et suggestions SEO
 import logging
 import json
 import re
+import os
 from datetime import datetime
 from pathlib import Path
 from typing import List, Dict, Optional
@@ -346,6 +347,30 @@ class SEOOptimizer:
         trending_keywords = self.competitor_analyzer.extract_trending_keywords(
             competitors
         )
+
+        # Fallback: si aucun concurrent ou aucun mot-clé tendance, utiliser les tendances par catégorie
+        if not competitors or not trending_keywords:
+            try:
+                region = ((self.config or {}).get("trends") or {}).get("region", "FR")
+            except Exception:
+                region = "FR"
+            try:
+                cat = int(category_id) if category_id is not None else 22
+            except Exception:
+                cat = 22
+            extra_trending = await self.get_trending_keywords_for_category(
+                cat, region=region
+            )
+            if extra_trending:
+                trending_keywords = trending_keywords or []
+                # Remplacer si vide, sinon étendre en évitant les doublons
+                if not trending_keywords:
+                    trending_keywords = extra_trending
+                else:
+                    existing = {tk.keyword for tk in trending_keywords}
+                    trending_keywords.extend(
+                        [tk for tk in extra_trending if tk.keyword not in existing]
+                    )
 
         # Suggestions pour le titre
         title_suggestions = self._analyze_title(title, trending_keywords, competitors)
@@ -694,9 +719,16 @@ def create_seo_optimizer(config: Dict) -> Optional[SEOOptimizer]:
     if not config.get("enabled", False):
         return None
 
-    youtube_api_key = config.get("youtube_api_key")
+    # Priorité: config, puis variables d'env (SEO_YOUTUBE_API_KEY, YOUTUBE_DATA_API_KEY)
+    youtube_api_key = (
+        config.get("youtube_api_key")
+        or os.environ.get("SEO_YOUTUBE_API_KEY")
+        or os.environ.get("YOUTUBE_DATA_API_KEY")
+    )
     if not youtube_api_key:
-        log.warning("Clé API YouTube manquante pour l'optimiseur SEO")
+        log.warning(
+            "Clé API YouTube manquante pour l'optimiseur SEO (config.youtube_api_key ou SEO_YOUTUBE_API_KEY/YOUTUBE_DATA_API_KEY)"
+        )
         return None
 
     try:

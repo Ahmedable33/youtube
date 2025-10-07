@@ -66,8 +66,7 @@ vision:
     base_url: http://127.0.0.1:11434
     model: llava
 seo_advanced:
-  enabled: false
-  youtube_api_key: null
+  enabled: true
   trends:
     enabled: true
     region: FR
@@ -78,7 +77,7 @@ seo_advanced:
     max_competitors: 20
     min_views_threshold: 1000
   ab_testing:
-    enabled: false
+    enabled: true
     storage_path: ./ab_tests
     auto_generate_variants: true
     max_variants: 4
