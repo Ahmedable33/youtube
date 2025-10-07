@@ -67,7 +67,6 @@ vision:
     model: llava
 seo_advanced:
   enabled: true
-  youtube_api_key: null
   trends:
     enabled: true
     region: FR
