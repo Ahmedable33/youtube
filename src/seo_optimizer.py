@@ -348,6 +348,30 @@ class SEOOptimizer:
             competitors
         )
 
+        # Fallback: si aucun concurrent ou aucun mot-clé tendance, utiliser les tendances par catégorie
+        if not competitors or not trending_keywords:
+            try:
+                region = ((self.config or {}).get("trends") or {}).get("region", "FR")
+            except Exception:
+                region = "FR"
+            try:
+                cat = int(category_id) if category_id is not None else 22
+            except Exception:
+                cat = 22
+            extra_trending = await self.get_trending_keywords_for_category(
+                cat, region=region
+            )
+            if extra_trending:
+                trending_keywords = trending_keywords or []
+                # Remplacer si vide, sinon étendre en évitant les doublons
+                if not trending_keywords:
+                    trending_keywords = extra_trending
+                else:
+                    existing = {tk.keyword for tk in trending_keywords}
+                    trending_keywords.extend(
+                        [tk for tk in extra_trending if tk.keyword not in existing]
+                    )
+
         # Suggestions pour le titre
         title_suggestions = self._analyze_title(title, trending_keywords, competitors)
         suggestions.extend(title_suggestions)
