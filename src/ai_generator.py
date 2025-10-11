@@ -259,9 +259,9 @@ def _apply_seo_suggestions(metadata: dict, suggestions: List) -> dict:
         if trending_from_desc:
             # Ne pas dupliquer des mots déjà présents
             desc_lower = desc.lower()
-            to_add = [
-                kw for kw in trending_from_desc if kw.lower() not in desc_lower
-            ][:5]
+            to_add = [kw for kw in trending_from_desc if kw.lower() not in desc_lower][
+                :5
+            ]
             if to_add:
                 # Ajouter en fin de description pour rester naturel
                 if "Mots-clés:" not in desc:
@@ -272,7 +272,7 @@ def _apply_seo_suggestions(metadata: dict, suggestions: List) -> dict:
                     if existing_line_idx != -1:
                         existing_segment = desc[
                             existing_line_idx : existing_line_idx + 200
-                        ]  # noqa: E203
+                        ]
                         for kw in to_add:
                             if kw.lower() not in existing_segment.lower():
                                 desc += ", " + kw

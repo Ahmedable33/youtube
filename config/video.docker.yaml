@@ -1,17 +1,37 @@
 video_path: ./test_video.mp4
 thumbnail_path: ./thumbnail.jpg
-title: 'Automatisation YouTube: planification auto et playlist'
-description: '
+title: '"Automatisez votre YouTube : Créez des playlists en auto !"'
+description: 'L''automatisation du contenu de votre canal YouTube peut être un outil
+  puissant pour augmenter la visibilité et l''engagement de vos abonnés. En créant
+  des playlists auto-générées, vous pouvez automatiser le processus de publication
+  de vidéos en fonction d''un calendrier prédefini. Cela permet de réduire les délais
+  de publication et de maximiser l''efficacité de votre stratégie de contenu.
 
-  --
 
-  Abonnez-vous pour plus de contenus !'
+  Les playlists auto-générées peuvent également aider à personnaliser l''expérience
+  de vos abonnés. En fonction des préférences et des intérêts de chaque abonné, vous
+  pouvez créer des playlists qui leur sont adaptées. Cela peut être réalisé grâce
+  à l''utilisation d''applications tierces telles que TubeBuddy ou VidIQ, qui proposent
+  des fonctionnalités d''analyse et de personnalisation avancées pour les créateurs'
 tags:
-- 'automatisation youtube: planification auto et playlist'
+- automatisation youtube
+- planification auto
+- playlist
+- gestion de contenus
+- intégration
+- api youtube
+- scripting python
+- google apps script
+- youtube api
+- programmation automatique
+- gestion de calendrier
+- synchronisation
+- importation
+- exportation
+- gestion des fichiers
+audio_language: fr
 category_id: 22
 privacy_status: private
-publish_at: '2025-10-01T16:00:00Z'
-made_for_kids: false
 enhance:
   enabled: true
   quality: youtube
@@ -37,10 +57,10 @@ enhance:
 seo:
   provider: ollama
   model: llama3.2:3b
-  host: http://127.0.0.1:11434
-  num_predict: 240
-  timeout_seconds: 300
-  fast_mode: false
+  host: http://ollama:11434
+  num_predict: 200
+  timeout_seconds: 600
+  fast_mode: true
   force_title_from_description: true
 subtitles:
   enabled: false
@@ -57,13 +77,8 @@ vision:
   provider: ollama
   frames_to_analyze: 3
   confidence_threshold: 0.6
-  openai:
-    api_key: null
-    model: gpt-4-vision-preview
-  google:
-    credentials_path: null
   ollama:
-    base_url: http://127.0.0.1:11434
+    base_url: http://ollama:11434
     model: llava
 seo_advanced:
   enabled: true

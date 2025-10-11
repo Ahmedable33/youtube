@@ -89,10 +89,10 @@ Ou laissez le git hook faire le travail automatiquement !
 
 ## 📊 État actuel
 
-**Branche** : `feat/public-privacy-vision-category-infallible-thumbnail`  
-**Commits** : 3 (5ce4b4a, 03aa6ff, 5a77efa)  
-**Tests locaux** : ✅ 57/57 passent  
-**Linting local** : ⚠️ À corriger (lignes trop longues)  
+**Branche** : `feat/public-privacy-vision-category-infallible-thumbnail`
+**Commits** : 3 (5ce4b4a, 03aa6ff, 5a77efa)
+**Tests locaux** : ✅ 57/57 passent
+**Linting local** : ⚠️ À corriger (lignes trop longues)
 **PR GitHub** : ⚠️ Description et reviewer manquants
 
 ---

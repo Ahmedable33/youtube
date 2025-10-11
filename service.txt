@@ -45,3 +45,22 @@ git pull --ff-only origin main    # ou `git pull --rebase` si tu préfères
 
 # créer la branche à partir de main à jour
 git checkout -b feature/ma-tache
+
+
+
+docker exec -w /app youtube-app bash -lc \
+  'python main.py ai-meta --topic "Ton nouveau sujet" \
+    --provider ollama --video-path ./test_video.mp4 \
+    --out-config config/video.docker.yaml --print && \
+   python main.py upload --config config/video.docker.yaml \
+    --client-secrets client_secret.json --headless --log-level INFO'
+
+
+    Commandes utiles
+    -Arrêt de la stack
+
+    docker compose down
+
+    -Redémarrage
+
+    docker compose up -d
