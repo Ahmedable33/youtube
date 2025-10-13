@@ -19,7 +19,7 @@ services:
       - "8000:8000"   # Web monitor
     volumes:
       - ./:/app
-    command: ["python", "start_services.py", "--config", "config/video.docker.yaml", "--sources", "config/sources.yaml", "--log-level", "INFO"]
+    command: ["python", "start_services.py", "--config", "config/video.docker.yaml", "--sources", "config/sources.yaml", "--log-level", "INFO", "--monitor-host", "0.0.0.0", "--monitor-port", "8000"]
 
   ollama:
     image: ollama/ollama:latest
