@@ -238,3 +238,58 @@ Exemple: exécuter tous les jours à 09:00.
 ## 9) Licence
 
 Ce projet est fourni tel quel, sans garantie. Utilisez-le conformément aux Conditions d'utilisation de YouTube et de Google Cloud.
+
+## 10) CI locale via Docker
+
+Une image CI Docker et un service `ci` sont fournis pour lancer lint + tests unitaires + tests d'intégration sans polluer votre machine.
+
+ 
+
+- Construire l'image CI:
+
+  ```bash
+  docker compose build ci
+  ```
+
+ 
+
+- CI complet (lint + unit + integration):
+
+  ```bash
+  docker compose run --rm ci
+  ```
+
+ 
+
+- Lint uniquement:
+
+  ```bash
+  docker compose run --rm ci bash -lc 'bash /app/scripts/ci.sh lint'
+  ```
+
+ 
+
+- Tests unitaires uniquement:
+
+  ```bash
+  docker compose run --rm ci bash -lc 'bash /app/scripts/ci.sh unit'
+  ```
+
+ 
+
+- Tests d'intégration uniquement:
+
+  ```bash
+  docker compose run --rm ci bash -lc 'bash /app/scripts/ci.sh integration'
+  ```
+
+ 
+
+Notes:
+
+- Le code hôte est monté dans le conteneur (`./:/app`), les corrections pre-commit (black/ruff/flake8) s'appliquent à vos fichiers.
+- Si certains tests d'intégration requièrent Ollama, démarrez le service `ollama` au préalable:
+
+  ```bash
+  docker compose up -d ollama
+  ```
