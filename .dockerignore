@@ -1,0 +1,21 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.pytest_cache/
+.venv/
+
+# Git & CI
+.git/
+.github/
+htmlcov/
+
+# Local
+*.log
+*.tmp
+.DS_Store
+
+# Node/web build (if any)
+web/node_modules/
+web/dist/

@@ -22,6 +22,7 @@ flake8 src/ tests/ --extend-ignore=E203,W503,E501
 ### ❌ PR Quality / checks - Failing
 
 **Causes possibles** :
+
 1. Description PR trop courte (< 20 caractères)
 2. Pas de reviewer/assignee
 3. PR trop volumineuse (> 60 fichiers ou > 3000 changements)
@@ -29,13 +30,16 @@ flake8 src/ tests/ --extend-ignore=E203,W503,E501
 #### Solutions
 
 **1. Description PR trop courte**
+
 - Éditez la PR sur GitHub
 - Ajoutez une description détaillée (minimum 20 caractères)
 
 **2. Pas de reviewer**
+
 - Assignez-vous comme "Assignee" ou demandez un review
 
 **3. PR trop volumineuse**
+
 - Ajouter le label `skip-pr-size-check` sur GitHub si justifié
 
 ## 🚀 Workflow de correction complet
