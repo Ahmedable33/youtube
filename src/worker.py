@@ -835,30 +835,33 @@ def process_queue(
                 or "public"
             )
 
-            # Brancher Vision (Ollama) pour catégorie si activée et aucune catégorie fournie
-            user_category = task.get("category_id") or task_meta.get("category_id")
-            if not user_category:
-                vision_cfg = (
-                    (cfg or {}).get("vision") if isinstance(cfg, dict) else None
-                )
-                if vision_cfg and vision_cfg.get("enabled"):
-                    try:
-                        from src.vision_analyzer import create_vision_analyzer
+            # Brancher Vision (Ollama) pour catégorie si activée (toujours tenter si activé)
+            vision_cat = None
+            vision_cfg = (
+                (cfg or {}).get("vision") if isinstance(cfg, dict) else None
+            )
+            if isinstance(vision_cfg, dict) and vision_cfg.get("enabled", False):
+                try:
+                    from src.vision_analyzer import VisionAnalyzer
+                    from src.thumbnail_generator import extract_frames
 
-                        analyzer = create_vision_analyzer(vision_cfg)
-                        if analyzer:
-                            log.info("Analyse vision pour déterminer la catégorie...")
-                            analysis = analyzer.analyze_video(
-                                Path(enhanced), num_frames=3
-                            )
-                            vision_cat = analysis.get("category_id")
-                            if vision_cat is not None:
-                                ai_generated_category = vision_cat
-                                log.info("Catégorie Vision détectée: %s", vision_cat)
-                    except Exception as ve:
-                        log.warning("Échec analyse Vision pour catégorie: %s", ve)
+                    analyzer = VisionAnalyzer(
+                        host=(vision_cfg or {}).get("host"),
+                        model=(vision_cfg or {}).get("model", "llava"),
+                        timeout=int((vision_cfg or {}).get("timeout", 60)),
+                    )
+                    # Extraire quelques frames pour l'analyse
+                    frames = extract_frames(Path(enhanced), num_frames=3)
+                    if frames:
+                        analysis = analyzer.analyze_video(Path(enhanced), num_frames=3)
+                        vision_cat = analysis.get("category_id")
+                        if vision_cat is not None:
+                            log.info("Catégorie Vision détectée: %s", vision_cat)
+                except Exception as ve:
+                    log.warning("Échec analyse Vision pour catégorie: %s", ve)
 
-            category_id = user_category or ai_generated_category or cfg_cat or 22
+            # Catégorie: uniquement IA/Vision, sinon 22 (ignorer catégorie utilisateur et config)
+            category_id = vision_cat or ai_generated_category or 22
             # Validation categoryId
             valid_categories = {
                 "1",

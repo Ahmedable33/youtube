@@ -66,16 +66,9 @@ def _safe_filename(name: str) -> str:
 def _reply_menu_keyboard() -> ReplyKeyboardMarkup:
     # Clavier persistant (s'affiche en bas, ne dépend pas du message)
     rows = [
-        ["Status", "Preview SEO", "Redo"],
+        ["Status"],
         ["AI: Re-générer Titre/Tags"],
-        ["Quality: low", "Quality: medium", "Quality: high"],
-        ["Quality: youtube", "Quality: max", "Chapters help"],
-        ["Privacy: Private", "Privacy: Public", "Privacy: Unlisted"],
-        ["Category: Gaming", "Category: Education", "Category: Entertainment"],
-        ["Subtitles: ON", "Subtitles: OFF"],
-        ["AI Title: ON", "AI Title: OFF"],
-        ["Schedule: Auto", "Schedule: Now", "Upload maintenant"],
-        ["Cancel"],
+        ["Upload maintenant", "Cancel"],
     ]
     return ReplyKeyboardMarkup(rows, resize_keyboard=True, one_time_keyboard=False)
 
@@ -322,7 +315,7 @@ async def _handle_video(
         "chat_id": chat_id,
         "received_at": datetime.utcnow().isoformat() + "Z",
         "video_path": str(out_path),
-        "status": "pending",
+        "status": "awaiting_confirm",
         "steps": ["enhance", "ai_meta", "upload"],
         "prefs": prefs,
         # Champs optionnels SEO par défaut (peuvent être enrichis)
@@ -340,9 +333,19 @@ async def _handle_video(
     with open(task_path, "w", encoding="utf-8") as f:
         json.dump(task, f, ensure_ascii=False, indent=2)
     _set_last_task(cfg.queue_dir, chat_id, task_path)
-    await msg.reply_text(
-        "✅ Reçu. Vidéo sauvegardée et tâche créée.",
-        reply_markup=_reply_menu_keyboard(),
+    # Demander confirmation de démarrage avant de lancer la tâche
+    await context.bot.send_message(
+        chat_id=chat_id,
+        text="✅ Vidéo sauvegardée. Appuyez sur OK pour démarrer le traitement.",
+        reply_to_message_id=msg.message_id,
+        reply_markup=InlineKeyboardMarkup(
+            [
+                [
+                    InlineKeyboardButton("✅ OK démarrer", callback_data="confirm_start"),
+                    InlineKeyboardButton("❌ Annuler", callback_data="confirm_cancel"),
+                ]
+            ]
+        ),
     )
 
 
@@ -400,9 +403,6 @@ def _main_menu_keyboard() -> InlineKeyboardMarkup:
         [
             InlineKeyboardButton(
                 "🔒 Privacy: " + current_privacy.title(), callback_data="privacy"
-            ),
-            InlineKeyboardButton(
-                "📂 Category: " + category_name, callback_data="category"
             ),
         ],
         [
@@ -640,49 +640,6 @@ def build_application(cfg: TelegramConfig) -> Application:
                 await msg.reply_text(
                     "Visibilité invalide. Utilisez: private, public, unlisted"
                 )
-        if txt.lower().startswith("category:"):
-            category_name = txt.split(":", 1)[1].strip().lower()
-            # Mapping des catégories YouTube courantes
-            category_map = {
-                "gaming": 20,
-                "education": 27,
-                "entertainment": 24,
-                "music": 10,
-                "tech": 28,
-                "science": 28,
-                "news": 25,
-                "sports": 17,
-                "comedy": 23,
-                "howto": 26,
-                "people": 22,
-                "blogs": 22,
-            }
-            if category_name in category_map:
-                category_id = category_map[category_name]
-                chat_id = msg.chat_id
-                prefs = _load_prefs(cfg.queue_dir, chat_id)
-                prefs["category_id"] = category_id
-                _save_prefs(cfg.queue_dir, chat_id, prefs)
-                taskp = _get_last_task(cfg.queue_dir, chat_id)
-                if taskp:
-                    try:
-                        data = json.loads(taskp.read_text(encoding="utf-8"))
-                        if data.get("status") == "pending":
-                            data["category_id"] = category_id
-                            taskp.write_text(
-                                json.dumps(data, ensure_ascii=False, indent=2),
-                                encoding="utf-8",
-                            )
-                    except Exception:
-                        pass
-                await msg.reply_text(
-                    f"✅ Catégorie définie sur '{category_name}' (ID: {category_id}) pour ce chat."
-                )
-            else:
-                await msg.reply_text(
-                    "Catégorie invalide. Utilisez: gaming, education, entertainment, music, tech, news,\n"
-                    "sports, comedy, howto, people"
-                )
         if txt.lower().startswith("subtitles:"):
             setting = txt.split(":", 1)[1].strip().lower()
             if setting in ("on", "off"):
@@ -769,11 +726,15 @@ def build_application(cfg: TelegramConfig) -> Application:
                 return
             try:
                 data = json.loads(taskp.read_text(encoding="utf-8"))
-                if data.get("status") != "pending":
+                status = data.get("status")
+                if status not in ("pending", "awaiting_confirm"):
                     await msg.reply_text(
-                        f"Tâche non pending (status: {data.get('status')}). Utilisez 'Redo' pour recréer une tâche."
+                        f"Tâche non prête (status: {status}). Utilisez 'Redo' pour recréer une tâche."
                     )
                     return
+                # Si en attente de confirmation, démarrer (passer à pending)
+                if status == "awaiting_confirm":
+                    data["status"] = "pending"
                 # Marquer pour skip enhancement
                 data["skip_enhance"] = True
                 taskp.write_text(
@@ -792,11 +753,13 @@ def build_application(cfg: TelegramConfig) -> Application:
                 return
             try:
                 data = json.loads(taskp.read_text(encoding="utf-8"))
-                if data.get("status") != "pending":
+                status = data.get("status")
+                if status not in ("pending", "awaiting_confirm"):
                     await msg.reply_text(
-                        f"Tâche non pending (status: {data.get('status')})."
+                        f"Tâche non annulable (status: {status})."
                     )
                     return
+                # Annule quelle que soit l'étape d'attente/début
                 data["status"] = "cancelled"
                 taskp.write_text(
                     json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8"
@@ -1405,64 +1368,7 @@ def build_application(cfg: TelegramConfig) -> Application:
 
     app.add_handler(CommandHandler("schedule", _cmd_schedule))
 
-    async def _cmd_category(update: Update, context: ContextTypes.DEFAULT_TYPE):
-        msg = update.message
-        if not msg or not msg.text:
-            return
-        chat_id = msg.chat_id
-        parts = msg.text.split()
-        if len(parts) < 2:
-            await msg.reply_text(
-                "Usage: /category <gaming|education|entertainment|music|tech|news|sports|comedy|howto|people>"
-            )
-            return
-        category_name = parts[1].lower()
-
-        # Mapping des catégories YouTube courantes
-        category_map = {
-            "gaming": 20,
-            "education": 27,
-            "entertainment": 24,
-            "music": 10,
-            "tech": 28,
-            "science": 28,
-            "news": 25,
-            "sports": 17,
-            "comedy": 23,
-            "howto": 26,
-            "people": 22,
-            "blogs": 22,
-        }
-
-        if category_name not in category_map:
-            await msg.reply_text(
-                "Catégorie invalide. Utilisez: "
-                "gaming, education, entertainment, music, tech, news, sports, "
-                "comedy, how to, people, blogs"
-            )
-            return
-
-        category_id = category_map[category_name]
-        prefs = _load_prefs(cfg.queue_dir, chat_id)
-        prefs["category_id"] = category_id
-        _save_prefs(cfg.queue_dir, chat_id, prefs)
-
-        taskp = _get_last_task(cfg.queue_dir, chat_id)
-        if taskp:
-            try:
-                data = json.loads(taskp.read_text(encoding="utf-8"))
-                if data.get("status") == "pending":
-                    data["category_id"] = category_id
-                    taskp.write_text(
-                        json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8"
-                    )
-            except Exception:
-                pass
-        await msg.reply_text(
-            f"✅ Catégorie définie sur '{category_name}' (ID: {category_id}) pour ce chat."
-        )
-
-    app.add_handler(CommandHandler("category", _cmd_category))
+    # /category: supprimé (catégorie déterminée automatiquement IA/Vision)
 
     async def _cmd_set(update: Update, context: ContextTypes.DEFAULT_TYPE):
         msg = update.message
@@ -1571,12 +1477,54 @@ def build_application(cfg: TelegramConfig) -> Application:
         data = query.data or ""
         chat_id = query.message.chat_id if query.message else None
         await query.answer()
+        # Confirmation de démarrage ou annulation après envoi vidéo
+        if data in ("confirm_start", "confirm_cancel"):
+            if chat_id is None:
+                return
+            taskp = _get_last_task(cfg.queue_dir, chat_id)
+            if not taskp:
+                await query.edit_message_text(
+                    "Aucune tâche récente trouvée."
+                )
+                return
+            try:
+                tdata = json.loads(taskp.read_text(encoding="utf-8"))
+                status = tdata.get("status")
+                if status != "awaiting_confirm":
+                    await query.edit_message_text(
+                        f"Tâche déjà {status}."
+                    )
+                    return
+                if data == "confirm_start":
+                    tdata["status"] = "pending"
+                    taskp.write_text(
+                        json.dumps(tdata, ensure_ascii=False, indent=2),
+                        encoding="utf-8",
+                    )
+                    await query.edit_message_text(
+                        "✅ Démarrage confirmé. La tâche est en attente de traitement."
+                    )
+                else:
+                    tdata["status"] = "cancelled"
+                    taskp.write_text(
+                        json.dumps(tdata, ensure_ascii=False, indent=2),
+                        encoding="utf-8",
+                    )
+                    await query.edit_message_text(
+                        "✅ Tâche annulée."
+                    )
+            except Exception as e:
+                await query.edit_message_text(
+                    f"❌ Erreur: {e}"
+                )
+            return
         # Menus
         if data == "action:quality_menu":
             await query.edit_message_reply_markup(reply_markup=_quality_menu_keyboard())
             return
         if data == "action:back_main":
-            await query.edit_message_reply_markup(reply_markup=_main_menu_keyboard())
+            # Ne pas afficher le menu principal; simplement retirer les boutons
+            await query.edit_message_reply_markup(reply_markup=None)
             return
         if data == "action:account_menu":
             await query.edit_message_reply_markup(
@@ -1596,7 +1544,7 @@ def build_application(cfg: TelegramConfig) -> Application:
                 config = load_config("config/video.yaml")
                 if not config.get("multi_accounts", {}).get("enabled", False):
                     await query.edit_message_text(
-                        "❌ Multi-comptes désactivé", reply_markup=_main_menu_keyboard()
+                        "❌ Multi-comptes désactivé"
                     )
                     return
 
@@ -1608,18 +1556,16 @@ def build_application(cfg: TelegramConfig) -> Application:
                     account = manager.accounts.get(account_id)
                     account_name = account.name if account else account_id
                     await query.edit_message_text(
-                        f"✅ Compte sélectionné: {account_name}",
-                        reply_markup=_main_menu_keyboard(),
+                        f"✅ Compte sélectionné: {account_name}"
                     )
                 else:
                     await query.edit_message_text(
-                        "❌ Erreur lors de la sélection du compte",
-                        reply_markup=_main_menu_keyboard(),
+                        "❌ Erreur lors de la sélection du compte"
                     )
 
             except Exception as e:
                 await query.edit_message_text(
-                    f"❌ Erreur: {str(e)}", reply_markup=_main_menu_keyboard()
+                    f"❌ Erreur: {str(e)}"
                 )
             return
 
@@ -1667,7 +1613,7 @@ def build_application(cfg: TelegramConfig) -> Application:
                 except Exception:
                     pass
             await query.edit_message_text(
-                f"✅ Qualité préférée: {preset}", reply_markup=_main_menu_keyboard()
+                f"✅ Qualité préférée: {preset}"
             )
 
     app.add_handler(CallbackQueryHandler(_on_callback))

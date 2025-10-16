@@ -114,6 +114,210 @@ def test_worker_uses_public_privacy_by_default(tmp_path: Path):
     assert data.get("status") == "done"
 
 
+def test_worker_ignores_user_and_cfg_category_and_falls_back_22(tmp_path: Path, monkeypatch):
+    """La catégorie doit être uniquement IA/Vision; si aucune, fallback 22 (ignorer user/config)."""
+    # Stub googleapiclient
+    ga = types.ModuleType("googleapiclient")
+    ga_discovery = types.ModuleType("googleapiclient.discovery")
+    ga_errors = types.ModuleType("googleapiclient.errors")
+    ga_http = types.ModuleType("googleapiclient.http")
+
+    def _stub_build(*args, **kwargs):
+        class _Svc:
+            pass
+
+        return _Svc()
+
+    ga_discovery.build = _stub_build
+
+    class _StubMediaFileUpload:
+        def __init__(self, *args, **kwargs):
+            pass
+
+    ga_http.MediaFileUpload = _StubMediaFileUpload
+
+    sys.modules["googleapiclient"] = ga
+    sys.modules["googleapiclient.discovery"] = ga_discovery
+    sys.modules["googleapiclient.errors"] = ga_errors
+    sys.modules["googleapiclient.http"] = ga_http
+
+    from src import worker
+
+    # Config avec category_id défini mais qui doit être ignoré; Vision désactivée
+    cfg = {
+        "privacy_status": "private",
+        "language": "fr",
+        "category_id": 10,  # Doit être ignoré
+        "enhance": {"enabled": False},
+        "subtitles": {"enabled": False},
+        "seo": {"provider": "none"},
+        "multi_accounts": {"enabled": False},
+        "vision": {"enabled": False},
+    }
+    cfg_path = tmp_path / "video.yaml"
+    cfg_path.write_text(json.dumps(cfg), encoding="utf-8")
+
+    # Préparer dirs
+    queue_dir = tmp_path / "queue"
+    archive_dir = tmp_path / "queue_archive"
+    queue_dir.mkdir()
+    archive_dir.mkdir()
+
+    # Vidéo factice
+    video = tmp_path / "video.mp4"
+    video.write_bytes(b"\x00\x00fakevideo")
+
+    # Tâche avec category_id (doit être ignorée) et métadonnées complètes (pas d'IA)
+    task = {
+        "video_path": str(video),
+        "status": "pending",
+        "meta": {
+            "title": "Titre complet",
+            "description": "Desc complète",
+            "tags": ["test"],
+            "category_id": 24,  # Doit être ignoré
+        },
+        "category_id": 10,  # Doit être ignoré
+        "skip_enhance": True,
+    }
+    task_path = queue_dir / "task_001.json"
+    task_path.write_text(json.dumps(task), encoding="utf-8")
+
+    upload_called = {"category_id": None}
+
+    def mock_upload(*args, **kwargs):
+        upload_called["category_id"] = kwargs.get("category_id")
+        return {"id": "vid_abc"}
+
+    # Stubs
+    monkeypatch.setattr(worker, "get_credentials", lambda *a, **k: object())
+    monkeypatch.setattr(worker, "get_best_thumbnail", lambda *a, **k: None)
+    monkeypatch.setattr(worker, "upload_video", mock_upload)
+
+    with patch("pathlib.Path.exists", return_value=True):
+        # Run worker
+        worker.process_queue(
+            queue_dir=str(queue_dir),
+            archive_dir=str(archive_dir),
+            config_path=str(cfg_path),
+            log_level="INFO",
+        )
+
+    # Catégorie doit être 22 (fallback), car ni IA ni Vision n'ont fourni de catégorie
+    assert upload_called["category_id"] == 22
+
+    # Succès et archivage
+    archived = archive_dir / task_path.name
+    assert archived.exists()
+    data = json.loads(archived.read_text(encoding="utf-8"))
+    assert data.get("status") == "done"
+
+
+def test_worker_uses_ai_category_when_provided(tmp_path: Path, monkeypatch):
+    """Si l'IA fournit une catégorie, elle doit être utilisée (Vision désactivée)."""
+    # Stub googleapiclient
+    ga = types.ModuleType("googleapiclient")
+    ga_discovery = types.ModuleType("googleapiclient.discovery")
+    ga_errors = types.ModuleType("googleapiclient.errors")
+    ga_http = types.ModuleType("googleapiclient.http")
+
+    def _stub_build(*args, **kwargs):
+        class _Svc:
+            pass
+
+        return _Svc()
+
+    ga_discovery.build = _stub_build
+
+    class _StubMediaFileUpload:
+        def __init__(self, *args, **kwargs):
+            pass
+
+    ga_http.MediaFileUpload = _StubMediaFileUpload
+
+    sys.modules["googleapiclient"] = ga
+    sys.modules["googleapiclient.discovery"] = ga_discovery
+    sys.modules["googleapiclient.errors"] = ga_errors
+    sys.modules["googleapiclient.http"] = ga_http
+
+    from src import worker
+
+    # Config minimale, Vision désactivée
+    cfg = {
+        "privacy_status": "private",
+        "language": "fr",
+        "enhance": {"enabled": False},
+        "subtitles": {"enabled": False},
+        "seo": {"provider": "none"},
+        "multi_accounts": {"enabled": False},
+        "vision": {"enabled": False},
+    }
+    cfg_path = tmp_path / "video.yaml"
+    cfg_path.write_text(json.dumps(cfg), encoding="utf-8")
+
+    # Préparer dirs
+    queue_dir = tmp_path / "queue"
+    archive_dir = tmp_path / "queue_archive"
+    queue_dir.mkdir()
+    archive_dir.mkdir()
+
+    # Vidéo factice
+    video = tmp_path / "video.mp4"
+    video.write_bytes(b"\x00\x00fakevideo")
+
+    # Tâche source telegram pour forcer l'appel IA
+    task = {
+        "source": "telegram",
+        "video_path": str(video),
+        "status": "pending",
+        "meta": {
+            "title": "Titre existant",
+            "description": "Desc existante",
+            "tags": ["x"],
+        },
+        "skip_enhance": True,
+    }
+    task_path = queue_dir / "task_001.json"
+    task_path.write_text(json.dumps(task), encoding="utf-8")
+
+    upload_called = {"category_id": None}
+
+    def mock_upload(*args, **kwargs):
+        upload_called["category_id"] = kwargs.get("category_id")
+        return {"id": "vid_ai"}
+
+    # Mock IA pour renvoyer une catégorie
+    def mock_generate_metadata(*args, **kwargs):
+        return {
+            "title": "AI Title",
+            "description": "AI Desc",
+            "tags": ["ai"],
+            "category_id": 25,  # News & Politics
+        }
+
+    # Stubs/mocks
+    monkeypatch.setattr(worker, "get_credentials", lambda *a, **k: object())
+    monkeypatch.setattr(worker, "get_best_thumbnail", lambda *a, **k: None)
+    monkeypatch.setattr(worker, "upload_video", mock_upload)
+    monkeypatch.setattr(worker, "generate_metadata", mock_generate_metadata)
+
+    with patch("pathlib.Path.exists", return_value=True):
+        # Run worker
+        worker.process_queue(
+            queue_dir=str(queue_dir),
+            archive_dir=str(archive_dir),
+            config_path=str(cfg_path),
+            log_level="INFO",
+        )
+
+    assert upload_called["category_id"] == 25
+
+    archived = archive_dir / task_path.name
+    assert archived.exists()
+    data = json.loads(archived.read_text(encoding="utf-8"))
+    assert data.get("status") == "done"
+
+
 def test_worker_thumbnail_always_generated(tmp_path: Path, monkeypatch):
     """Test E2E: thumbnail toujours générée (infaillible) même si get_best_thumbnail échoue"""
     # Stub googleapiclient
