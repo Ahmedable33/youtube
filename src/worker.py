@@ -809,7 +809,6 @@ def process_queue(
             cfg_priv = (
                 (cfg or {}).get("privacy_status") if isinstance(cfg, dict) else None
             )
-            cfg_cat = (cfg or {}).get("category_id") if isinstance(cfg, dict) else None
             cfg_license = (
                 (cfg or {}).get("license") if isinstance(cfg, dict) else None
             )  # "youtube" | "creativeCommon"
@@ -837,9 +836,7 @@ def process_queue(
 
             # Brancher Vision (Ollama) pour catégorie si activée (toujours tenter si activé)
             vision_cat = None
-            vision_cfg = (
-                (cfg or {}).get("vision") if isinstance(cfg, dict) else None
-            )
+            vision_cfg = (cfg or {}).get("vision") if isinstance(cfg, dict) else None
             if isinstance(vision_cfg, dict) and vision_cfg.get("enabled", False):
                 try:
                     from src.vision_analyzer import VisionAnalyzer

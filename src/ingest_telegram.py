@@ -341,7 +341,9 @@ async def _handle_video(
         reply_markup=InlineKeyboardMarkup(
             [
                 [
-                    InlineKeyboardButton("✅ OK démarrer", callback_data="confirm_start"),
+                    InlineKeyboardButton(
+                        "✅ OK démarrer", callback_data="confirm_start"
+                    ),
                     InlineKeyboardButton("❌ Annuler", callback_data="confirm_cancel"),
                 ]
             ]
@@ -383,7 +385,6 @@ def _main_menu_keyboard() -> InlineKeyboardMarkup:
     # Valeurs par défaut affichées dans le menu principal (sans contexte de chat)
     current_quality = "medium"
     current_privacy = "private"
-    category_name = "People & Blogs"
     subtitles_enabled = False
     schedule_mode = "now"
 
@@ -755,9 +756,7 @@ def build_application(cfg: TelegramConfig) -> Application:
                 data = json.loads(taskp.read_text(encoding="utf-8"))
                 status = data.get("status")
                 if status not in ("pending", "awaiting_confirm"):
-                    await msg.reply_text(
-                        f"Tâche non annulable (status: {status})."
-                    )
+                    await msg.reply_text(f"Tâche non annulable (status: {status}).")
                     return
                 # Annule quelle que soit l'étape d'attente/début
                 data["status"] = "cancelled"
@@ -1483,17 +1482,13 @@ def build_application(cfg: TelegramConfig) -> Application:
                 return
             taskp = _get_last_task(cfg.queue_dir, chat_id)
             if not taskp:
-                await query.edit_message_text(
-                    "Aucune tâche récente trouvée."
-                )
+                await query.edit_message_text("Aucune tâche récente trouvée.")
                 return
             try:
                 tdata = json.loads(taskp.read_text(encoding="utf-8"))
                 status = tdata.get("status")
                 if status != "awaiting_confirm":
-                    await query.edit_message_text(
-                        f"Tâche déjà {status}."
-                    )
+                    await query.edit_message_text(f"Tâche déjà {status}.")
                     return
                 if data == "confirm_start":
                     tdata["status"] = "pending"
@@ -1510,13 +1505,9 @@ def build_application(cfg: TelegramConfig) -> Application:
                         json.dumps(tdata, ensure_ascii=False, indent=2),
                         encoding="utf-8",
                     )
-                    await query.edit_message_text(
-                        "✅ Tâche annulée."
-                    )
+                    await query.edit_message_text("✅ Tâche annulée.")
             except Exception as e:
-                await query.edit_message_text(
-                    f"❌ Erreur: {e}"
-                )
+                await query.edit_message_text(f"❌ Erreur: {e}")
             return
         # Menus
         if data == "action:quality_menu":
@@ -1543,9 +1534,7 @@ def build_application(cfg: TelegramConfig) -> Application:
 
                 config = load_config("config/video.yaml")
                 if not config.get("multi_accounts", {}).get("enabled", False):
-                    await query.edit_message_text(
-                        "❌ Multi-comptes désactivé"
-                    )
+                    await query.edit_message_text("❌ Multi-comptes désactivé")
                     return
 
                 from .multi_account_manager import create_multi_account_manager
@@ -1564,9 +1553,7 @@ def build_application(cfg: TelegramConfig) -> Application:
                     )
 
             except Exception as e:
-                await query.edit_message_text(
-                    f"❌ Erreur: {str(e)}"
-                )
+                await query.edit_message_text(f"❌ Erreur: {str(e)}")
             return
 
         # Status / Redo / Cancel
@@ -1612,9 +1599,7 @@ def build_application(cfg: TelegramConfig) -> Application:
                         )
                 except Exception:
                     pass
-            await query.edit_message_text(
-                f"✅ Qualité préférée: {preset}"
-            )
+            await query.edit_message_text(f"✅ Qualité préférée: {preset}")
 
     app.add_handler(CallbackQueryHandler(_on_callback))
     return app

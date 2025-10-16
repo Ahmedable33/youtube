@@ -4,7 +4,7 @@
 
 ### User Input
 
-@[conversation:"Implement Auto-Scheduling and Playlist"] 
+@[conversation:"Implement Auto-Scheduling and Playlist"]
 
 quelle sont les dernier fonctionnaliteeimplementer
 
@@ -161,7 +161,7 @@ Je vais vérifier l’état du dépôt et la branche courante avant de créer et
 # Action proposée
 
 - **[Créer et pousser une nouvelle branche]** pour ces modifications.
-- Proposition de nom (aligné avec votre style): `feat/auto-scheduling-and-playlist`  
+- Proposition de nom (aligné avec votre style): `feat/auto-scheduling-and-playlist`
   Alternatives: `feat/scheduler-playlist-daemon`, `feat/auto-schedule-playlist-2025-10-05`
 
 Dites-moi le nom que vous préférez. Si OK, je lance les commandes ci-dessous.
@@ -239,7 +239,7 @@ git commit -m "feat(scheduler,worker,uploader): auto-planification, ajout playli
 git push --no-verify -u origin feat/auto-scheduling-and-playlist
 ```
 
-Souhaites-tu que je les exécute maintenant ?  
+Souhaites-tu que je les exécute maintenant ?
 Note: cela inclura aussi la suppression de `test_video.mp4`.
 
 # TODOs
@@ -252,7 +252,7 @@ Résumé: prêt à pousser la branche en bypassant les hooks locaux pour avancer
 
 ### User Input
 
-@[TerminalName: bash, ProcessId: 13570] 
+@[TerminalName: bash, ProcessId: 13570]
 
 ### Planner Response
 
@@ -275,7 +275,7 @@ ________________________________ test_probe_audio_language_success _____________
 >       worker = importlib.import_module("src.worker")
                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-tests/unit/test_worker_new_features.py:26: 
+tests/unit/test_worker_new_features.py:26:
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 /usr/lib/python3.12/importlib/__init__.py:90: in import_module
     return _bootstrap._gcd_import(name[level:], package, level)
@@ -295,7 +295,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 
     from __future__ import annotations
-    
+
     import json
     import logging
     import shutil
@@ -304,7 +304,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
     import re
     from pathlib import Path
     from typing import Optional
-    
+
     from src.config_loader import load_config, ConfigError
     from src.video_enhance import enhance_video, EnhanceError
     from src.ai_generator import MetaRequest, generate_metadata
@@ -328,7 +328,7 @@ _______________________________ test_probe_audio_language_undefined ____________
 >       worker = importlib.import_module("src.worker")
                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-tests/unit/test_worker_new_features.py:48: 
+tests/unit/test_worker_new_features.py:48:
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 /usr/lib/python3.12/importlib/__init__.py:90: in import_module
     return _bootstrap._gcd_import(name[level:], package, level)
@@ -348,7 +348,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 
     from __future__ import annotations
-    
+
     import json
     import logging
     import shutil
@@ -357,7 +357,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
     import re
     from pathlib import Path
     from typing import Optional
-    
+
     from src.config_loader import load_config, ConfigError
     from src.video_enhance import enhance_video, EnhanceError
     from src.ai_generator import MetaRequest, generate_metadata
@@ -381,7 +381,7 @@ ______________________________ test_probe_audio_language_no_metadata ___________
 >       worker = importlib.import_module("src.worker")
                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-tests/unit/test_worker_new_features.py:67: 
+tests/unit/test_worker_new_features.py:67:
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 /usr/lib/python3.12/importlib/__init__.py:90: in import_module
     return _bootstrap._gcd_import(name[level:], package, level)
@@ -401,7 +401,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 
     from __future__ import annotations
-    
+
     import json
     import logging
     import shutil
@@ -410,7 +410,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
     import re
     from pathlib import Path
     from typing import Optional
-    
+
     from src.config_loader import load_config, ConfigError
     from src.video_enhance import enhance_video, EnhanceError
     from src.ai_generator import MetaRequest, generate_metadata
@@ -434,7 +434,7 @@ _____________________________ test_probe_audio_language_ffprobe_error __________
 >       worker = importlib.import_module("src.worker")
                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-tests/unit/test_worker_new_features.py:85: 
+tests/unit/test_worker_new_features.py:85:
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 /usr/lib/python3.12/importlib/__init__.py:90: in import_module
     return _bootstrap._gcd_import(name[level:], package, level)
@@ -454,7 +454,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 
     from __future__ import annotations
-    
+
     import json
     import logging
     import shutil
@@ -463,7 +463,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
     import re
     from pathlib import Path
     from typing import Optional
-    
+
     from src.config_loader import load_config, ConfigError
     from src.video_enhance import enhance_video, EnhanceError
     from src.ai_generator import MetaRequest, generate_metadata
@@ -487,7 +487,7 @@ ________________________________ test_probe_audio_language_timeout _____________
 >       worker = importlib.import_module("src.worker")
                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-tests/unit/test_worker_new_features.py:104: 
+tests/unit/test_worker_new_features.py:104:
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 /usr/lib/python3.12/importlib/__init__.py:90: in import_module
     return _bootstrap._gcd_import(name[level:], package, level)
@@ -507,7 +507,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 
     from __future__ import annotations
-    
+
     import json
     import logging
     import shutil
@@ -516,7 +516,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
     import re
     from pathlib import Path
     from typing import Optional
-    
+
     from src.config_loader import load_config, ConfigError
     from src.video_enhance import enhance_video, EnhanceError
     from src.ai_generator import MetaRequest, generate_metadata
@@ -542,7 +542,7 @@ tmp_path = PosixPath('/tmp/pytest-of-hamux/pytest-1/test_generate_placeholder_th
 >       worker = importlib.import_module("src.worker")
                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-tests/unit/test_worker_new_features.py:119: 
+tests/unit/test_worker_new_features.py:119:
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 /usr/lib/python3.12/importlib/__init__.py:90: in import_module
     return _bootstrap._gcd_import(name[level:], package, level)
@@ -562,7 +562,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 
     from __future__ import annotations
-    
+
     import json
     import logging
     import shutil
@@ -571,7 +571,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
     import re
     from pathlib import Path
     from typing import Optional
-    
+
     from src.config_loader import load_config, ConfigError
     from src.video_enhance import enhance_video, EnhanceError
     from src.ai_generator import MetaRequest, generate_metadata
@@ -597,7 +597,7 @@ tmp_path = PosixPath('/tmp/pytest-of-hamux/pytest-1/test_generate_placeholder_th
 >       worker = importlib.import_module("src.worker")
                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-tests/unit/test_worker_new_features.py:158: 
+tests/unit/test_worker_new_features.py:158:
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 /usr/lib/python3.12/importlib/__init__.py:90: in import_module
     return _bootstrap._gcd_import(name[level:], package, level)
@@ -617,7 +617,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 
     from __future__ import annotations
-    
+
     import json
     import logging
     import shutil
@@ -626,7 +626,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
     import re
     from pathlib import Path
     from typing import Optional
-    
+
     from src.config_loader import load_config, ConfigError
     from src.video_enhance import enhance_video, EnhanceError
     from src.ai_generator import MetaRequest, generate_metadata
@@ -652,7 +652,7 @@ tmp_path = PosixPath('/tmp/pytest-of-hamux/pytest-1/test_generate_placeholder_th
 >       worker = importlib.import_module("src.worker")
                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-tests/unit/test_worker_new_features.py:177: 
+tests/unit/test_worker_new_features.py:177:
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 /usr/lib/python3.12/importlib/__init__.py:90: in import_module
     return _bootstrap._gcd_import(name[level:], package, level)
@@ -672,7 +672,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 
     from __future__ import annotations
-    
+
     import json
     import logging
     import shutil
@@ -681,7 +681,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
     import re
     from pathlib import Path
     from typing import Optional
-    
+
     from src.config_loader import load_config, ConfigError
     from src.video_enhance import enhance_video, EnhanceError
     from src.ai_generator import MetaRequest, generate_metadata
@@ -705,7 +705,7 @@ ________________________________ test_default_privacy_status_logic _____________
 >       worker = importlib.import_module("src.worker")
                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-tests/unit/test_worker_new_features.py:207: 
+tests/unit/test_worker_new_features.py:207:
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 /usr/lib/python3.12/importlib/__init__.py:90: in import_module
     return _bootstrap._gcd_import(name[level:], package, level)
@@ -725,7 +725,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 
     from __future__ import annotations
-    
+
     import json
     import logging
     import shutil
@@ -734,7 +734,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
     import re
     from pathlib import Path
     from typing import Optional
-    
+
     from src.config_loader import load_config, ConfigError
     from src.video_enhance import enhance_video, EnhanceError
     from src.ai_generator import MetaRequest, generate_metadata
@@ -762,11 +762,11 @@ _______________________________ test_quality_defaults_known_presets ____________
         sys.modules["googleapiclient.discovery"] = ga_discovery
         sys.modules["googleapiclient.errors"] = ga_errors
         sys.modules["googleapiclient.http"] = ga_http
-    
+
 >       worker = importlib.import_module("src.worker")
                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-tests/unit/test_worker_utils.py:18: 
+tests/unit/test_worker_utils.py:18:
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 /usr/lib/python3.12/importlib/__init__.py:90: in import_module
     return _bootstrap._gcd_import(name[level:], package, level)
@@ -786,7 +786,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 
     from __future__ import annotations
-    
+
     import json
     import logging
     import shutil
@@ -795,7 +795,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
     import re
     from pathlib import Path
     from typing import Optional
-    
+
     from src.config_loader import load_config, ConfigError
     from src.video_enhance import enhance_video, EnhanceError
     from src.ai_generator import MetaRequest, generate_metadata
@@ -825,11 +825,11 @@ tmp_path = PosixPath('/tmp/pytest-of-hamux/pytest-1/test_default_title_for_build
         sys.modules["googleapiclient.discovery"] = ga_discovery
         sys.modules["googleapiclient.errors"] = ga_errors
         sys.modules["googleapiclient.http"] = ga_http
-    
+
 >       worker = importlib.import_module("src.worker")
                  ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-tests/unit/test_worker_utils.py:39: 
+tests/unit/test_worker_utils.py:39:
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 /usr/lib/python3.12/importlib/__init__.py:90: in import_module
     return _bootstrap._gcd_import(name[level:], package, level)
@@ -849,7 +849,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
 _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
 
     from __future__ import annotations
-    
+
     import json
     import logging
     import shutil
@@ -858,7 +858,7 @@ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
     import re
     from pathlib import Path
     from typing import Optional
-    
+
     from src.config_loader import load_config, ConfigError
     from src.video_enhance import enhance_video, EnhanceError
     from src.ai_generator import MetaRequest, generate_metadata
@@ -953,13 +953,13 @@ Je vais committer la correction dans [src/worker.py](cci:7://file:///home/hamux/
 
 # Contexte des tests
 
-- Les échecs provenaient de `from googleapiclient.discovery import build` au niveau module dans [src/worker.py](cci:7://file:///home/hamux/Projets/youtube/src/worker.py:0:0-0:0).  
+- Les échecs provenaient de `from googleapiclient.discovery import build` au niveau module dans [src/worker.py](cci:7://file:///home/hamux/Projets/youtube/src/worker.py:0:0-0:0).
 - Correction: l’import se fait maintenant à l’intérieur de [_add_video_to_playlist()](cci:1://file:///home/hamux/Projets/youtube/src/worker.py:124:0-145:91), donc l’import de `src.worker` ne casse plus les tests qui ne touchent pas aux playlists.
 
 # État du dépôt
 
 - **[branche courante]** `feat/auto-scheduling-and-playlist`
-- **[fichiers non suivis]** `.coverage` (généré par pytest).  
+- **[fichiers non suivis]** `.coverage` (généré par pytest).
   Si tu veux, on peut l’ajouter à `.gitignore`.
 
 # Prochaines actions recommandées
@@ -970,7 +970,7 @@ Je vais committer la correction dans [src/worker.py](cci:7://file:///home/hamux/
 
 # Statut
 
-- Nouvelle branche créée et poussée avec les corrections nécessaires.  
+- Nouvelle branche créée et poussée avec les corrections nécessaires.
 - Prêt pour revue/PR.
 
 ### User Input
@@ -1170,7 +1170,7 @@ Souhaites-tu que j’active l’application automatique des suggestions de descr
 
 ### User Input
 
-active l’application automatique des suggestions de description/CTA 
+active l’application automatique des suggestions de description/CTA
 
 *Updated todo list*
 
@@ -1217,8 +1217,8 @@ Je vais committer et pousser la modification qui active l’application automati
 
 # Activation effectuée
 
-- **[Code modifié]** [src/ai_generator.py](cci:7://file:///home/hamux/Projets/youtube/src/ai_generator.py:0:0-0:0)  
-  - Fonction [generate_metadata()](cci:1://file:///home/hamux/Projets/youtube/src/ai_generator.py:48:0-208:19) appelle toujours [_apply_seo_suggestions()](cci:1://file:///home/hamux/Projets/youtube/src/ai_generator.py:211:0-301:19) quand `seo_advanced.enabled: true`.  
+- **[Code modifié]** [src/ai_generator.py](cci:7://file:///home/hamux/Projets/youtube/src/ai_generator.py:0:0-0:0)
+  - Fonction [generate_metadata()](cci:1://file:///home/hamux/Projets/youtube/src/ai_generator.py:48:0-208:19) appelle toujours [_apply_seo_suggestions()](cci:1://file:///home/hamux/Projets/youtube/src/ai_generator.py:211:0-301:19) quand `seo_advanced.enabled: true`.
   - Fonction [_apply_seo_suggestions()](cci:1://file:///home/hamux/Projets/youtube/src/ai_generator.py:211:0-301:19) applique maintenant automatiquement:
     - **[Description]** ajout de mots-clés tendance manquants (max 5) en fin de description sous la forme “Mots-clés: …”.
     - **[CTA]** insertion d’un CTA par défaut si absent: “Abonnez-vous, likez et partagez pour soutenir la chaîne !”.
@@ -1375,7 +1375,7 @@ rootdir: /home/hamux/Projets/youtube
 configfile: pytest.ini
 testpaths: tests/unit, tests/integration
 plugins: respx-0.20.2, cov-5.0.0, anyio-4.10.0
-collected 57 items                                                               
+collected 57 items
 
 tests/unit/test_ai_generator.py::test_heuristic_generate_simple PASSED     [  1%]
 tests/unit/test_ai_generator.py::test_ollama_fast_mode_ok PASSED           [  3%]
@@ -1469,8 +1469,8 @@ Coverage HTML written to dir htmlcov
 
 📏 Vérification taille des changements...
    Fichiers modifiés: 0
-   Additions: 
-   Deletions: 
+   Additions:
+   Deletions:
    Total changements: 0
 ✅ Taille PR
 
@@ -1658,7 +1658,7 @@ python main.py ai-meta \
 
 # Prochaines étapes
 - **[Re-run avec SEO]** Fournis-moi la clé (ou exporte-la) pour vérifier l’ajout auto des mots-clés tendance.
-- **[Run avec vidéo + Vision IA]** Si tu veux la vision: ajoute `--video-path <chemin>` pour influencer les métadonnées via `llava` configuré. 
+- **[Run avec vidéo + Vision IA]** Si tu veux la vision: ajoute `--video-path <chemin>` pour influencer les métadonnées via `llava` configuré.
 
 Résumé: Environnement activé, dépendances OK, génération heuristique exécutée et validée. Prêt à relancer avec la clé SEO pour tester l’enrichissement “Mots-clés: …”.
 
@@ -1702,13 +1702,13 @@ Je vais activer l’environnement virtuel et exécuter uniquement les nouveaux t
 
 # Tests ajoutés et passés
 
-- **[Nouveau]** [tests/unit/test_ai_generator_seo_apply.py](cci:7://file:///home/hamux/Projets/youtube/tests/unit/test_ai_generator_seo_apply.py:0:0-0:0)  
+- **[Nouveau]** [tests/unit/test_ai_generator_seo_apply.py](cci:7://file:///home/hamux/Projets/youtube/tests/unit/test_ai_generator_seo_apply.py:0:0-0:0)
   Vérifie que [_apply_seo_suggestions()](cci:1://file:///home/hamux/Projets/youtube/src/ai_generator.py:211:0-301:19):
   - Ajoute des mots-clés tendance à la fin de la description sous “Mots-clés: …”.
   - Ajoute un CTA si absent.
   - Enrichit le titre et les tags avec des mots-clés tendance.
 
-- **[Nouveau]** [tests/unit/test_seo_optimizer_env_fallback.py](cci:7://file:///home/hamux/Projets/youtube/tests/unit/test_seo_optimizer_env_fallback.py:0:0-0:0)  
+- **[Nouveau]** [tests/unit/test_seo_optimizer_env_fallback.py](cci:7://file:///home/hamux/Projets/youtube/tests/unit/test_seo_optimizer_env_fallback.py:0:0-0:0)
   Vérifie que [create_seo_optimizer()](cci:1://file:///home/hamux/Projets/youtube/src/seo_optimizer.py:692:0-713:19):
   - Utilise `SEO_YOUTUBE_API_KEY` si `youtube_api_key` est null dans la config.
   - Retourne `None` si aucune clé n’est disponible.
@@ -1743,33 +1743,33 @@ dit moi comment tu gere le titre et la description
 
 ## Titre
 
-- **[OpenAI]** [_openai_generate()](cci:1://file:///home/hamux/Projets/youtube/src/ai_generator.py:304:0-366:5)  
+- **[OpenAI]** [_openai_generate()](cci:1://file:///home/hamux/Projets/youtube/src/ai_generator.py:304:0-366:5)
   Génère un JSON avec un titre conforme aux contraintes (ton, langue, `max_title_chars`).
-- **[Ollama]** [_ollama_generate()](cci:1://file:///home/hamux/Projets/youtube/src/ai_generator.py:369:0-501:56)  
+- **[Ollama]** [_ollama_generate()](cci:1://file:///home/hamux/Projets/youtube/src/ai_generator.py:369:0-501:56)
   Prompt structuré (ton, langue, catégories, etc.). Si Vision est dispo, on ajoute au prompt: `content_type`, `tags`, `description`, `confidence`. Le modèle renvoie directement le titre.
-- **[Ollama Fast]** [_ollama_generate_fast()](cci:1://file:///home/hamux/Projets/youtube/src/ai_generator.py:504:0-598:17)  
+- **[Ollama Fast]** [_ollama_generate_fast()](cci:1://file:///home/hamux/Projets/youtube/src/ai_generator.py:504:0-598:17)
   Appel court dédié “titre seul”, on prend la première ligne, tronquée à `req.max_title_chars`.
-- **[Heuristique]** [_heuristic_generate()](cci:1://file:///home/hamux/Projets/youtube/src/ai_generator.py:601:0-726:17)  
+- **[Heuristique]** [_heuristic_generate()](cci:1://file:///home/hamux/Projets/youtube/src/ai_generator.py:601:0-726:17)
   - Titre = première ligne de `input_text` ou `topic`, tronqué à `max_title_chars`.
   - Si Vision détecte `content_type` absent du titre, on ajoute “ - ContentType” (ex: “- Gameplay”).
-- **[Optimisation a posteriori]** [_apply_seo_suggestions()](cci:1://file:///home/hamux/Projets/youtube/src/ai_generator.py:211:0-301:19)  
+- **[Optimisation a posteriori]** [_apply_seo_suggestions()](cci:1://file:///home/hamux/Projets/youtube/src/ai_generator.py:211:0-301:19)
   - Si une suggestion `type="title"` contient “mots-clés tendance”, on ajoute jusqu’à 2 mots-clés au titre, seulement si:
     - Le mot n’est pas déjà présent.
     - La longueur totale reste < ~60 (`len(title) + len(keyword) + 3 < 60`).
 
 ## Description
 
-- **[OpenAI/Ollama]**  
+- **[OpenAI/Ollama]**
   Le modèle génère une description structurée (2–3 paragraphes, mots-clés naturels).
-- **[Heuristique]** [_heuristic_generate()](cci:1://file:///home/hamux/Projets/youtube/src/ai_generator.py:601:0-726:17)  
+- **[Heuristique]** [_heuristic_generate()](cci:1://file:///home/hamux/Projets/youtube/src/ai_generator.py:601:0-726:17)
   - Description = `input_text` (si fourni) + séparateur + CTA “Abonnez-vous pour plus de contenus !”.
   - Si Vision a une `description` visuelle, on insère “Contenu détecté: …”.
-- **[Optimisation a posteriori]** [_apply_seo_suggestions()](cci:1://file:///home/hamux/Projets/youtube/src/ai_generator.py:211:0-301:19)  
+- **[Optimisation a posteriori]** [_apply_seo_suggestions()](cci:1://file:///home/hamux/Projets/youtube/src/ai_generator.py:211:0-301:19)
   - On agrège les “mots-clés tendance” venant des suggestions `type="description"` (confiance ≥ 0.7).
   - On ajoute jusqu’à 5 mots-clés manquants en fin de description:
     - Si “Mots-clés:” absent: on ajoute une ligne “Mots-clés: kw1, kw2, …”.
     - Si présent: fusion sans doublons (on lit un segment voisin de 200 chars après “Mots-clés:” pour éviter les répétitions).
-  - On vérifie la présence d’un CTA via motifs (`abonnez-vous`, `like`, `partag`, `commentaire`, `cloche`, `subscribe`, `bell`, `share`, `comment`).  
+  - On vérifie la présence d’un CTA via motifs (`abonnez-vous`, `like`, `partag`, `commentaire`, `cloche`, `subscribe`, `bell`, `share`, `comment`).
     - Si aucun CTA détecté: on ajoute “Abonnez-vous, likez et partagez pour soutenir la chaîne !”.
 
 ## Influence de la Vision IA
@@ -1856,8 +1856,8 @@ Je vais activer l’environnement virtuel et exécuter le script de diagnostic [
 
 # Findings
 
-- **[YAML key present]** [config/video.yaml](cci:7://file:///home/hamux/Projets/youtube/config/video.yaml:0:0-0:0) → `seo_advanced.youtube_api_key` est défini.  
-- **[ENV absents]** `SEO_YOUTUBE_API_KEY` et `YOUTUBE_DATA_API_KEY` ne sont pas exportés dans l’environnement actuel.  
+- **[YAML key present]** [config/video.yaml](cci:7://file:///home/hamux/Projets/youtube/config/video.yaml:0:0-0:0) → `seo_advanced.youtube_api_key` est défini.
+- **[ENV absents]** `SEO_YOUTUBE_API_KEY` et `YOUTUBE_DATA_API_KEY` ne sont pas exportés dans l’environnement actuel.
 - **[Accès clé]** [create_seo_optimizer()](cci:1://file:///home/hamux/Projets/youtube/src/seo_optimizer.py:692:0-713:19) fonctionne via la clé du YAML. Le fallback ENV seul échoue (aucune variable exportée).
 
 Résumé exécution [.check_seo_env.py](cci:7://file:///home/hamux/Projets/youtube/.check_seo_env.py:0:0-0:0):
@@ -1900,7 +1900,7 @@ Résumé exécution [.check_seo_env.py](cci:7://file:///home/hamux/Projets/youtu
 
 # Status
 
-- Le système accède actuellement à la clé via [config/video.yaml](cci:7://file:///home/hamux/Projets/youtube/config/video.yaml:0:0-0:0).  
+- Le système accède actuellement à la clé via [config/video.yaml](cci:7://file:///home/hamux/Projets/youtube/config/video.yaml:0:0-0:0).
 - L’export ENV n’a pas encore pris effet; je peux appliquer le switch (ENV-only + nettoyage YAML) et pousser si tu confirmes.
 
 ### User Input
@@ -1927,7 +1927,7 @@ I'll format the new test files with black, then commit and push them while bypas
 - **[Fichiers ajoutés]**
   - [tests/unit/test_ai_generator_seo_apply.py](cci:7://file:///home/hamux/Projets/youtube/tests/unit/test_ai_generator_seo_apply.py:0:0-0:0)
   - [tests/unit/test_seo_optimizer_env_fallback.py](cci:7://file:///home/hamux/Projets/youtube/tests/unit/test_seo_optimizer_env_fallback.py:0:0-0:0)
-- **[Hooks]** Black/Ruff/Flake8/Pytest passés (format black auto-appliqué).  
+- **[Hooks]** Black/Ruff/Flake8/Pytest passés (format black auto-appliqué).
 - **[Statut]** Commit et push réussis.
 
 # Accès clé YouTube (vérification)
@@ -1967,7 +1967,7 @@ I'll format the new test files with black, then commit and push them while bypas
 Souhaites-tu que je:
 - **[A]** remette `youtube_api_key: null` dans [config/video.yaml](cci:7://file:///home/hamux/Projets/youtube/config/video.yaml:0:0-0:0) et pousse,
 - **[B]** laisse la clé dans YAML (moins sécurisé),
-- **[C]** configure aussi le secret CI `SEO_YOUTUBE_API_KEY` et ouvre la PR ? 
+- **[C]** configure aussi le secret CI `SEO_YOUTUBE_API_KEY` et ouvre la PR ?
 
 Résumé: les tests sont poussés; l’accès à la clé fonctionne via YAML. Je peux basculer vers ENV et pousser si tu confirmes l’option A/C.
 
@@ -2024,7 +2024,7 @@ optimizer_from_env_key_length: 53
   ```
 
 # Option: commit de sécurité
-- Veux-tu que je commit/push la suppression de la clé dans [config/video.yaml](cci:7://file:///home/hamux/Projets/youtube/config/video.yaml:0:0-0:0) (pour garder l’historique propre) ?  
+- Veux-tu que je commit/push la suppression de la clé dans [config/video.yaml](cci:7://file:///home/hamux/Projets/youtube/config/video.yaml:0:0-0:0) (pour garder l’historique propre) ?
   Je peux aussi ouvrir une PR avec un résumé sécurité + tests ajoutés.
 
 Résumé: la clé API est bien exportée et accessible. Prêt à relancer la génération avec SEO avancé pour voir “Mots-clés: …” et le CTA appliqués.
@@ -2150,8 +2150,8 @@ Je vais ouvrir [src/seo_optimizer.py](cci:7://file:///home/hamux/Projets/youtube
   - Je peux faire ce patch si tu valides.
 
 # Résumé
-- Le système lit bien la clé API (ENV OK).  
-- L’absence de “Mots-clés:” vient probablement d’un résultat vide côté recherche YouTube.  
+- Le système lit bien la clé API (ENV OK).
+- L’absence de “Mots-clés:” vient probablement d’un résultat vide côté recherche YouTube.
 - Propose: relancer avec `--log-level DEBUG` pour confirmer, ou me laisser exécuter un script de diagnostic. Ensuite, si besoin, j’implémente un fallback vers l’API “trending videos” quand aucun concurrent n’est trouvé.
 
 ### User Input
@@ -2341,11 +2341,11 @@ python main.py upload --config config/video.yaml --client-secrets client_secret.
 # Résultat du test en temps réel
 
 - **[Upload]** Réussi via `main.py upload --config config/video.yaml --headless`
-- **[Vidéo ID]** `Sysxkg8rUHE`  
+- **[Vidéo ID]** `Sysxkg8rUHE`
   URL (si accessible): https://youtu.be/Sysxkg8rUHE
 - **[Pré-amélioration]** Active: la vidéo a été améliorée (`test_video.enhanced.mp4`)
-- **[Planification]** `publishAt` normalisé et fixé dans le futur (≈ +10 min)  
-  Extrait de [src/uploader.py](cci:7://file:///home/hamux/Projets/youtube/src/uploader.py:0:0-0:0) (log `Upload body`):  
+- **[Planification]** `publishAt` normalisé et fixé dans le futur (≈ +10 min)
+  Extrait de [src/uploader.py](cci:7://file:///home/hamux/Projets/youtube/src/uploader.py:0:0-0:0) (log `Upload body`):
   `publishAt: "2025-10-07T12:56:03Z"`, `privacyStatus: "private"`
 - **[Miniature]** Définie avec succès (`thumbnail.jpg`)
 
@@ -2370,7 +2370,7 @@ Je me suis appuyé sur la logique documentée dans la mémoire “uploader fixes
   ```
 
 # Statut
-- Test réel effectué avec succès: vidéo améliorée, planifiée, miniature définie.  
+- Test réel effectué avec succès: vidéo améliorée, planifiée, miniature définie.
 Souhaites-tu que j’applique la génération AI sur [config/video.yaml](cci:7://file:///home/hamux/Projets/youtube/config/video.yaml:0:0-0:0) pour inclure les mots-clés tendance, puis que je relance un upload avec ces métadonnées ?
 
 ### User Input
@@ -2427,7 +2427,7 @@ J’utilise l’environnement virtuel actif et le secret `SEO_YOUTUBE_API_KEY` d
 - **Option 2 (OpenAI/Ollama)**: je relance `ai-meta` avec le provider de ton choix et je réuploade.
 - **Option 3 (patch heuristique)**: j’implémente l’ajout “Mots-clés: …” basé sur `--target-keywords` même sans API.
 
-Dis-moi l’option que tu préfères et je l’implémente tout de suite.  
+Dis-moi l’option que tu préfères et je l’implémente tout de suite.
 Résumé: Uploads réels OK et planifiés. SEO avancé opérationnel côté clé, mais l’API n’a pas fourni de tendances sur ce sujet pendant ces runs. J’attends ton choix pour enrichir la description avec “Mots-clés: …”.
 
 ### User Input
@@ -2480,7 +2480,7 @@ I will generate metadata using Ollama with Vision (llava) and write them to [con
   Ton YAML `seo` contient déjà `timeout_seconds: 300` et `num_predict: 240`. On peut les porter à 600/200 si besoin.
 
 - **[Activer mode rapide si tu veux éviter les timeouts]**
-  Dans [config/video.yaml](cci:7://file:///home/hamux/Projets/youtube/config/video.yaml:0:0-0:0) → `seo.fast_mode: true`  
+  Dans [config/video.yaml](cci:7://file:///home/hamux/Projets/youtube/config/video.yaml:0:0-0:0) → `seo.fast_mode: true`
   Utilisera ` _ollama_generate_fast()` (3 petits appels) → plus robuste sur CPU.
 
 # Rejouer la génération + upload
@@ -2507,7 +2507,7 @@ I will generate metadata using Ollama with Vision (llava) and write them to [con
 
 # Proposé maintenant
 
-- Démarrer Ollama via Docker, pull `llava` + `llama3.2:3b`, augmenter `OLLAMA_TIMEOUT`, et relancer la génération.  
+- Démarrer Ollama via Docker, pull `llava` + `llama3.2:3b`, augmenter `OLLAMA_TIMEOUT`, et relancer la génération.
 Souhaites-tu que je bascule `seo.fast_mode: true` et que je relance le run, ou que je configure Ollama en Docker comme ci-dessus et réessaie ensuite ?
 
 ### User Input
@@ -2706,13 +2706,13 @@ docker exec ollama ollama pull llama3.2:3b || true
 # 4) Generate metadata with Ollama + Vision inside app container
 # Note: ensure sample video/thumbnail exist
 docker exec -w /app youtube-app bash -lc '
-  if [ ! -f test_video.mp4 ]; then 
-    ffmpeg -loglevel error -y -f lavfi -i color=c=blue:s=1280x720:d=3 -f lavfi -i sine=frequency=1000:duration=3 -shortest -c:v libx264 -pix_fmt yuv420p -c:a aac -t 3 test_video.mp4; 
-    echo "Created test_video.mp4"; 
+  if [ ! -f test_video.mp4 ]; then
+    ffmpeg -loglevel error -y -f lavfi -i color=c=blue:s=1280x720:d=3 -f lavfi -i sine=frequency=1000:duration=3 -shortest -c:v libx264 -pix_fmt yuv420p -c:a aac -t 3 test_video.mp4;
+    echo "Created test_video.mp4";
   fi;
-  if [ ! -f thumbnail.jpg ]; then 
-    ffmpeg -loglevel error -y -f lavfi -i color=c=red:s=1280x720 -vframes 1 thumbnail.jpg; 
-    echo "Created thumbnail.jpg"; 
+  if [ ! -f thumbnail.jpg ]; then
+    ffmpeg -loglevel error -y -f lavfi -i color=c=red:s=1280x720 -vframes 1 thumbnail.jpg;
+    echo "Created thumbnail.jpg";
   fi;
   python main.py ai-meta --topic "Automatisation YouTube: planification auto et playlist" \
     --provider ollama --video-path ./test_video.mp4 \
@@ -2897,7 +2897,7 @@ I will inspect the Ollama container to understand why it’s unhealthy by checki
 - [config/video.docker.yaml](cci:7://file:///home/hamux/Projets/youtube/config/video.docker.yaml:0:0-0:0) pointe `seo.host` et `vision.ollama.base_url` vers `http://ollama:11434` et active `fast_mode: true` pour réduire les timeouts CPU.
 - Vous pouvez ajuster `OLLAMA_TIMEOUT`/`OLLAMA_NUM_PREDICT` via [docker-compose.yml](cci:7://file:///home/hamux/Projets/youtube/docker-compose.yml:0:0-0:0) (déjà renseignés).
 
-Souhaitez-vous que j’exécute ces commandes pour vous maintenant (en commençant par la création du [.env](cci:7://file:///home/hamux/Projets/youtube/.env:0:0-0:0) si nécessaire), ou préférez-vous les lancer depuis votre terminal où votre clé `SEO_YOUTUBE_API_KEY` est déjà exportée ? 
+Souhaitez-vous que j’exécute ces commandes pour vous maintenant (en commençant par la création du [.env](cci:7://file:///home/hamux/Projets/youtube/.env:0:0-0:0) si nécessaire), ou préférez-vous les lancer depuis votre terminal où votre clé `SEO_YOUTUBE_API_KEY` est déjà exportée ?
 
 Résumé: la stack Docker est prête. Il reste à fournir `SEO_YOUTUBE_API_KEY` à docker-compose, démarrer, tirer les modèles, puis lancer la génération et l’upload dans le conteneur.
 
@@ -2905,8 +2905,8 @@ Résumé: la stack Docker est prête. Il reste à fournir `SEO_YOUTUBE_API_KEY` 
 
 (.venv) hamux@hamux-ThinkPad-L540:~/Projets/youtube$ docker compose up -d --build
 docker compose ps
-WARN[0000] /home/hamux/Projets/youtube/docker-compose.yml: the attribute `version`  is obsolete, it will be ignored, please remove it to avoid potential confusion 
-[+] Building 2213.4s (15/15) FINISHED                                                              
+WARN[0000] /home/hamux/Projets/youtube/docker-compose.yml: the attribute `version`  is obsolete, it will be ignored, please remove it to avoid potential confusion
+[+] Building 2213.4s (15/15) FINISHED
  => [internal] load local bake definitions                                                    0.0s
  => => reading from stdin 495B                                                                0.0s
  => [internal] load build definition from Dockerfile                                          0.3s
@@ -2946,10 +2946,10 @@ WARN[0000] /home/hamux/Projets/youtube/docker-compose.yml: the attribute `versio
  => => naming to docker.io/library/youtube-app                                                0.1s
  => resolving provenance for metadata file                                                    0.1s
 [+] Running 3/3
- ✔ youtube-app            Built                                                               0.0s 
- ✔ Container ollama       Healthy                                                            18.3s 
- ✔ Container youtube-app  Started                                                            11.5s 
-WARN[0000] /home/hamux/Projets/youtube/docker-compose.yml: the attribute `version`  is obsolete, it will be ignored, please remove it to avoid potential confusion 
+ ✔ youtube-app            Built                                                               0.0s
+ ✔ Container ollama       Healthy                                                            18.3s
+ ✔ Container youtube-app  Started                                                            11.5s
+WARN[0000] /home/hamux/Projets/youtube/docker-compose.yml: the attribute `version`  is obsolete, it will be ignored, please remove it to avoid potential confusion
 NAME          IMAGE                  COMMAND                  SERVICE   CREATED          STATUS                   PORTS
 ollama        ollama/ollama:latest   "/bin/ollama serve"      ollama    20 seconds ago   Up 9 seconds (healthy)   11434/tcp
 youtube-app   youtube-app            "python start_servic…"   app       12 seconds ago   Up 2 seconds             0.0.0.0:8000->8000/tcp, [::]:8000->8000/tcp
@@ -3278,7 +3278,7 @@ dis moi si tout est bon pour relancer les test lancer tout les service et voir s
 - **[Tests unitaires]** L’image runtime n’embarque pas `pytest` (pour build léger). Pour exécuter la suite de tests, lance-la sur l’hôte, ou je peux ajouter un profil d’image “ci” si tu veux.
 
 # Prêt à relancer
-Tout est en ordre pour relancer les tests E2E et tous les services. Tu veux que je lance le cycle complet maintenant (restart stack → pull modèles → génération → upload) et te renvoie les résultats ici ? 
+Tout est en ordre pour relancer les tests E2E et tous les services. Tu veux que je lance le cycle complet maintenant (restart stack → pull modèles → génération → upload) et te renvoie les résultats ici ?
 
 Résumé: stack Docker OK, commandes fournies pour redémarrer les services et rejouer un test complet de génération et d’upload.
 
@@ -3815,10 +3815,10 @@ Statut: branche de CI Docker poussée; CI locale et distante prêtes. En attente
 
 ### User Input
 
-Ajoute le cache pip + matrix dans 
+Ajoute le cache pip + matrix dans
 .github/workflows/ci.yml
  et pousse sur la branche ?
-Mets à jour le 
+Mets à jour le
 README.md
  avec les instructions CI Docker ?
 
@@ -3955,19 +3955,19 @@ pour ancer les test d'integration et unitaire a ton besoin de .venv
 - Garde le fichier [.env](cci:7://file:///home/hamux/Projets/youtube/.env:0:0-0:0) (pour docker-compose), mais le dossier [.venv/](cci:7://file:///home/hamux/Projets/youtube/.venv:0:0-0:0) n’est pas requis pour les tests via Docker.
 
 # Comment lancer les tests sans [.venv](cci:7://file:///home/hamux/Projets/youtube/.venv:0:0-0:0)
-- **CI complet (lint + unit + integration)**  
+- **CI complet (lint + unit + integration)**
   ```bash
   docker compose run --rm ci
   ```
-- **Unit tests uniquement**  
+- **Unit tests uniquement**
   ```bash
   docker compose run --rm ci bash -lc 'bash /app/scripts/ci.sh unit'
   ```
-- **Tests d’intégration uniquement**  
+- **Tests d’intégration uniquement**
   ```bash
   docker compose run --rm ci bash -lc 'bash /app/scripts/ci.sh integration'
   ```
-- **Lint uniquement (pre-commit)**  
+- **Lint uniquement (pre-commit)**
   ```bash
   docker compose run --rm ci bash -lc 'bash /app/scripts/ci.sh lint'
   ```
@@ -3977,7 +3977,7 @@ pour ancer les test d'integration et unitaire a ton besoin de .venv
 - **pre-commit local**: si tu veux exécuter les hooks sans passer par le conteneur.
 
 # Notes
-- **Ollama pour intégration**: si certains tests d’intégration l’exigent, démarre le service avant:  
+- **Ollama pour intégration**: si certains tests d’intégration l’exigent, démarre le service avant:
   ```bash
   docker compose up -d ollama
   ```
@@ -4149,7 +4149,7 @@ J'ai mis à jour [docker-compose.yml](cci:7://file:///home/hamux/Projets/youtube
   ```
 - **[Vérifier que le monitor a bien démarré]**
   - Confirmer dans les logs `app` qu’un serveur FastAPI/uvicorn est lancé sur `0.0.0.0:8000`.
-- **[Conflit de port improbable]** Le mapping a réussi (sinon `docker compose up` aurait échoué). 
+- **[Conflit de port improbable]** Le mapping a réussi (sinon `docker compose up` aurait échoué).
 
 Souhaites-tu que je te streame les logs de `youtube-app` maintenant pour confirmer que `monitor.py` tourne bien et détecter toute erreur éventuelle ?
 

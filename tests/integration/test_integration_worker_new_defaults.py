@@ -114,7 +114,9 @@ def test_worker_uses_public_privacy_by_default(tmp_path: Path):
     assert data.get("status") == "done"
 
 
-def test_worker_ignores_user_and_cfg_category_and_falls_back_22(tmp_path: Path, monkeypatch):
+def test_worker_ignores_user_and_cfg_category_and_falls_back_22(
+    tmp_path: Path, monkeypatch
+):
     """La catégorie doit être uniquement IA/Vision; si aucune, fallback 22 (ignorer user/config)."""
     # Stub googleapiclient
     ga = types.ModuleType("googleapiclient")
