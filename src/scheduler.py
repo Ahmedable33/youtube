@@ -307,6 +307,15 @@ class UploadScheduler:
         slot_end = datetime.combine(slot_time.date(), slot.end_time)
         slot_end = self.timezone.localize(slot_end)
 
+        # Capacité dynamique:
+        # - Samedi/Dimanche: intact (capacité par défaut)
+        # - Autres jours: priorité 1 -> 3; autres priorités -> 1
+        day_name = slot_time.strftime("%A").lower()
+        if day_name in ("saturday", "sunday"):
+            capacity = max_tasks_per_slot
+        else:
+            capacity = 3 if getattr(slot, "priority", 1) == 1 else 1
+
         # Compter les tâches déjà planifiées dans ce créneau
         tasks_in_slot = 0
         for task in self.scheduled_tasks:
@@ -316,7 +325,7 @@ class UploadScheduler:
             ):
                 tasks_in_slot += 1
 
-        return tasks_in_slot < max_tasks_per_slot
+        return tasks_in_slot < capacity
 
     def schedule_task(
         self,
