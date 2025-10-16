@@ -8,6 +8,9 @@ from datetime import datetime
 import re
 from pathlib import Path
 from typing import Optional
+import smtplib
+from email.message import EmailMessage
+import os
 
 from src.config_loader import load_config, ConfigError
 from src.video_enhance import enhance_video, EnhanceError
@@ -121,6 +124,54 @@ def _to_rfc3339_utc_from_dt(dt: datetime) -> str:
 
         dt = dt.astimezone(_tz.utc)
     return dt.replace(microsecond=0).isoformat().replace("+00:00", "Z")
+
+
+def _notify_email(email_cfg: dict, subject: str, body: str) -> None:
+    try:
+        if not isinstance(email_cfg, dict) or not email_cfg.get("enabled"):
+            return
+        to_field = email_cfg.get("to") or []
+        if isinstance(to_field, str):
+            recipients = [t.strip() for t in to_field.split(",") if t.strip()]
+        else:
+            recipients = [str(t).strip() for t in to_field if str(t).strip()]
+        if not recipients:
+            return
+        host = str(email_cfg.get("host", "localhost"))
+        port = int(email_cfg.get("port", 587))
+        use_tls = bool(email_cfg.get("tls", True))
+        username = email_cfg.get("username")
+        # Prefer environment variable if specified
+        password_env_key = email_cfg.get("password_env")
+        password = None
+        if password_env_key:
+            password = os.getenv(str(password_env_key))
+        if not password:
+            password = email_cfg.get("password")
+        sender = email_cfg.get("from") or username or "noreply@example.com"
+
+        msg = EmailMessage()
+        msg["Subject"] = subject
+        msg["From"] = sender
+        msg["To"] = ", ".join(recipients)
+        msg.set_content(body)
+
+        with smtplib.SMTP(host, port, timeout=15) as server:
+            if use_tls:
+                try:
+                    server.starttls()
+                except Exception:
+                    pass
+            if username:
+                try:
+                    server.login(str(username), str(password or ""))
+                except Exception:
+                    pass
+            server.send_message(msg)
+
+        log.info("Notification email envoyée à: %s", ",".join(recipients))
+    except Exception as e:
+        log.warning("Notification email échouée: %s", e)
 
 
 def _add_video_to_playlist(
@@ -1003,6 +1054,38 @@ def process_queue(
                 )
                 vid = resp.get("id")
                 log.info("Upload réussi: video id=%s", vid)
+                try:
+                    import yaml
+
+                    cfg_path = (
+                        Path(config_path) if config_path else Path("config/video.yaml")
+                    )
+                    raw_cfg = (
+                        yaml.safe_load(cfg_path.read_text(encoding="utf-8"))
+                        if cfg_path.exists()
+                        else {}
+                    )
+                    email_cfg = (
+                        (raw_cfg.get("notifications") or {}).get("email")
+                        if isinstance(raw_cfg, dict)
+                        else None
+                    )
+                    if isinstance(email_cfg, dict):
+                        video_url = f"https://youtu.be/{vid}" if vid else ""
+                        subject = f"Publication YouTube: {title}"
+                        body_lines = [
+                            f"Titre: {title}",
+                            f"ID: {vid}",
+                            f"URL: {video_url}",
+                            f"Visibilité: {privacy_status}",
+                            f"publishAt: {publish_at_final or '(immédiat)'}",
+                            f"Fichier: {enhanced}",
+                        ]
+                        if upload_account_id:
+                            body_lines.append(f"Compte: {upload_account_id}")
+                        _notify_email(email_cfg, subject, "\n".join(body_lines))
+                except Exception as _e:
+                    log.warning("Notification email ignorée: %s", _e)
                 # Ajout éventuel à une playlist si demandée
                 try:
                     playlist_id = (
