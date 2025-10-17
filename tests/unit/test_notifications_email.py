@@ -41,8 +41,10 @@ def test_notify_email_sends_message(monkeypatch):
             assert host == "smtp.example.com"
             assert port == 587
             assert timeout == 15
+
         def __enter__(self):
             return mock_server
+
         def __exit__(self, *args):
             return False
 
@@ -76,8 +78,10 @@ def test_notify_email_uses_env_password(monkeypatch):
     class _SMTP:
         def __init__(self, host, port, timeout):
             pass
+
         def __enter__(self):
             return mock_server
+
         def __exit__(self, *args):
             return False
 
