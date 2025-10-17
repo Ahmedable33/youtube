@@ -107,3 +107,14 @@ multi_accounts:
     daily_quota_limit: 10000
     daily_upload_limit: 6
     api_calls_per_upload: 1600
+notifications:
+  email:
+    enabled: true
+    host: smtp.gmail.com
+    port: 587
+    tls: true
+    username: "ahmedabladon33@gmail.com"
+    password_env: EMAIL_PASSWORD
+    from: "ahmedabladon33@gmail.com"
+    to:
+      - "ahmedabladon33@gmail.com"
