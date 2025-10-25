@@ -57,8 +57,10 @@ jobs:
       - name: Extract tag
         id: meta
         run: |
-          echo "TAG=${GITHUB_REF_NAME}" >> $GITHUB_OUTPUT
-          echo "IMAGE=ghcr.io/${GITHUB_REPOSITORY}/youtube-app" >> $GITHUB_OUTPUT
+          TAG="${GITHUB_REF_NAME}"
+          REPO_LC="${GITHUB_REPOSITORY,,}"
+          echo "TAG=${TAG}" >> $GITHUB_OUTPUT
+          echo "IMAGE=ghcr.io/${REPO_LC}/youtube-app" >> $GITHUB_OUTPUT
 
       - name: Build and push
         uses: docker/build-push-action@v6
