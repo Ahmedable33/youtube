@@ -1,5 +1,31 @@
 
 services:
+  reverse-proxy:
+    image: traefik:v2.11
+    container_name: traefik
+    command:
+      - --providers.docker=true
+      - --providers.docker.exposedbydefault=false
+      - --entrypoints.web.address=:80
+      - --entrypoints.websecure.address=:443
+      - --certificatesresolvers.le.acme.email=${TRAEFIK_ACME_EMAIL}
+      - --certificatesresolvers.le.acme.storage=/letsencrypt/acme.json
+      - --certificatesresolvers.le.acme.httpchallenge=true
+      - --certificatesresolvers.le.acme.httpchallenge.entrypoint=web
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - letsencrypt:/letsencrypt
+    networks:
+      - traefik
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
   app:
     build: .
     container_name: youtube-app
@@ -26,7 +52,8 @@ services:
       - EMAIL_PASSWORD=${EMAIL_PASSWORD:-}
 
     ports:
-      - "8000:8000"   # Web monitor
+      - "127.0.0.1:8000:8000"
+
     volumes:
       - ./:/app
     command: ["python", "start_services.py", "--config", "config/video.docker.yaml", "--sources", "config/sources.yaml", "--log-level", "INFO", "--monitor-host", "0.0.0.0", "--monitor-port", "8000"]
@@ -36,6 +63,17 @@ services:
       timeout: 5s
       retries: 5
       start_period: 20s
+    networks:
+      - traefik
+      - default
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.monitor.rule=Host(`${MONITOR_HOST}`)
+      - traefik.http.routers.monitor.entrypoints=websecure
+      - traefik.http.routers.monitor.tls.certresolver=le
+      - traefik.http.services.monitor.loadbalancer.server.port=8000
+      - traefik.http.routers.monitor.middlewares=monitor-auth@docker
+      - traefik.http.middlewares.monitor-auth.basicauth.users=${MONITOR_BASIC_AUTH}
 
   ollama:
     image: ollama/ollama:latest
@@ -91,3 +129,7 @@ services:
 
 volumes:
   ollama:
+  letsencrypt:
+
+networks:
+  traefik:
