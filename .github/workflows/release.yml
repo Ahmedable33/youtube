@@ -57,8 +57,10 @@ jobs:
       - name: Extract tag
         id: meta
         run: |
-          echo "TAG=${GITHUB_REF_NAME}" >> $GITHUB_OUTPUT
-          echo "IMAGE=ghcr.io/${GITHUB_REPOSITORY}/youtube-app" >> $GITHUB_OUTPUT
+          TAG="${GITHUB_REF_NAME}"
+          REPO_LC="${GITHUB_REPOSITORY,,}"
+          echo "TAG=${TAG}" >> $GITHUB_OUTPUT
+          echo "IMAGE=ghcr.io/${REPO_LC}/youtube-app" >> $GITHUB_OUTPUT
 
       - name: Build and push
         uses: docker/build-push-action@v6
@@ -70,9 +72,39 @@ jobs:
             ${{ steps.meta.outputs.IMAGE }}:${{ steps.meta.outputs.TAG }}
             ${{ steps.meta.outputs.IMAGE }}:latest
 
+  deploy_railway:
+    name: Deploy to Railway
+    needs: [create_release]
+    if: ${{ secrets.RAILWAY_TOKEN != '' }}
+    runs-on: ubuntu-latest
+    container: ghcr.io/railwayapp/cli:latest
+    env:
+      RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+      RAILWAY_PROJECT_ID: ${{ secrets.RAILWAY_PROJECT_ID }}
+      RAILWAY_ENVIRONMENT_ID: ${{ secrets.RAILWAY_ENVIRONMENT_ID }}
+      SVC_ID: ${{ secrets.RAILWAY_SERVICE_ID }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Deploy to Railway
+        run: |
+          set -e
+          if [ -n "${RAILWAY_PROJECT_ID}" ]; then
+            railway link --project "${RAILWAY_PROJECT_ID}"
+          fi
+          if [ -n "${RAILWAY_ENVIRONMENT_ID}" ]; then
+            railway environment "${RAILWAY_ENVIRONMENT_ID}"
+          fi
+          if [ -n "${SVC_ID}" ]; then
+            railway up --service="${SVC_ID}"
+          else
+            railway up
+          fi
+
   deploy_ssh:
     name: Deploy to Server (SSH)
     needs: [create_release]
+    if: ${{ secrets.DEPLOY_HOST != '' }}
     runs-on: ubuntu-latest
     environment: production
     steps:
