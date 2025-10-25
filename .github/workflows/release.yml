@@ -33,3 +33,72 @@ jobs:
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  build_push_image:
+    name: Build and Push Docker Image (GHCR)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract tag
+        id: meta
+        run: |
+          echo "TAG=${GITHUB_REF_NAME}" >> $GITHUB_OUTPUT
+          echo "IMAGE=ghcr.io/${GITHUB_REPOSITORY}/youtube-app" >> $GITHUB_OUTPUT
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          tags: |
+            ${{ steps.meta.outputs.IMAGE }}:${{ steps.meta.outputs.TAG }}
+            ${{ steps.meta.outputs.IMAGE }}:latest
+
+  deploy_ssh:
+    name: Deploy to Server (SSH)
+    needs: [create_release]
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.1.0
+        with:
+          host: ${{ secrets.DEPLOY_HOST }}
+          username: ${{ secrets.DEPLOY_USER }}
+          key: ${{ secrets.DEPLOY_SSH_KEY }}
+          port: ${{ secrets.DEPLOY_PORT || 22 }}
+          script: |
+            set -e
+            REPO_URL="https://github.com/${{ github.repository }}.git"
+            APP_DIR="${{ secrets.DEPLOY_PATH || '/srv/youtube' }}"
+            if [ ! -d "$APP_DIR/.git" ]; then
+              mkdir -p "$APP_DIR"
+              git clone "$REPO_URL" "$APP_DIR"
+            fi
+            cd "$APP_DIR"
+            git fetch --all --tags
+            # Checkout the exact tag we released
+            git checkout "${GITHUB_REF_NAME}"
+            git pull --ff-only || true
+            # Ensure .env exists on server with runtime secrets
+            if [ ! -f .env ]; then
+              echo "[WARN] .env not found on server; create it before first run" >&2
+            fi
+            # Bring up stack (build locally per compose since app uses build:)
+            docker compose up -d --build

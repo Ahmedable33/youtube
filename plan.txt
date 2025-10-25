@@ -89,9 +89,3 @@ Dis-moi ton choix et je l'implémente tout de suite !
 -securiter
 -notification
 -revoir le titire ;dscrip;et tag selon les conditions
-
-
-pour publier une video sur youtube trove moi tout le champ api quil faut rempliveux que le système fixe automatiquement publish_at quand privacy_status: private et que publish_at est vide
-
-
-veux que le système fixe automatiquement publish_at quand privacy_status: private et que publish_at est vide
