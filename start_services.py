@@ -245,13 +245,20 @@ def main():
     procs: list[tuple[str, subprocess.Popen]] = []
     try:
         # Web monitor
+        host_val = (
+            "0.0.0.0"
+            if os.environ.get("PORT")
+            and args.monitor_host in ("127.0.0.1", "localhost")
+            else args.monitor_host
+        )
+        port_val = int(os.environ.get("PORT") or args.monitor_port)
         mon_cmd = [
             PYTHON,
             "monitor.py",
             "--host",
-            args.monitor_host,
+            host_val,
             "--port",
-            str(args.monitor_port),
+            str(port_val),
             "--queue-dir",
             args.queue_dir,
             "--archive-dir",
