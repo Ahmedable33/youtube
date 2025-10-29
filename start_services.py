@@ -82,6 +82,30 @@ def _which(cmd: str) -> Optional[str]:
     return which(cmd)
 
 
+def _write_file_from_env(json_var: str, b64_var: str, dest: Path) -> None:
+    data_b64 = os.environ.get(b64_var)
+    content = None
+    if data_b64:
+        try:
+            import base64
+
+            content = base64.b64decode(data_b64).decode("utf-8")
+        except Exception:
+            content = None
+    if content is None:
+        content = os.environ.get(json_var)
+    if content:
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        dest.write_text(content, encoding="utf-8")
+
+
+def _ensure_oauth_files_from_env() -> None:
+    client_dest = PROJECT_ROOT / "config" / "client_secret.json"
+    token_dest = PROJECT_ROOT / "config" / "token.json"
+    _write_file_from_env("YT_CLIENT_SECRET_JSON", "YT_CLIENT_SECRET_B64", client_dest)
+    _write_file_from_env("YT_TOKEN_JSON", "YT_TOKEN_B64", token_dest)
+
+
 def start_ollama_if_needed(video_cfg: dict) -> Optional[subprocess.Popen]:
     seo = (video_cfg or {}).get("seo") or {}
     provider = str(seo.get("provider") or "").lower()
@@ -226,6 +250,9 @@ def main():
         help="Délai minimal (s) entre deux relances d'un même service",
     )
     args = ap.parse_args()
+    if os.environ.get("LOG_LEVEL"):
+        args.log_level = os.environ.get("LOG_LEVEL") or args.log_level
+    _ensure_oauth_files_from_env()
 
     video_cfg = _read_yaml(Path(args.config))
     # Charger la configuration des sources (pour savoir si le bot Telegram doit être lancé)

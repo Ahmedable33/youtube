@@ -55,12 +55,7 @@ enhance:
   reencode_audio: true
   audio_bitrate: 192k
 seo:
-  provider: ollama
-  model: llama3.2:3b
-  host: http://ollama:11434
-  num_predict: 200
-  timeout_seconds: 600
-  fast_mode: true
+  provider: openai
   force_title_from_description: true
 subtitles:
   enabled: false
@@ -73,13 +68,7 @@ subtitles:
   draft_mode: false
   replace_existing: false
 vision:
-  enabled: true
-  provider: ollama
-  frames_to_analyze: 3
-  confidence_threshold: 0.6
-  ollama:
-    base_url: http://ollama:11434
-    model: llava
+  enabled: false
 seo_advanced:
   enabled: true
   trends:
