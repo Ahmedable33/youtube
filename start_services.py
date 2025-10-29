@@ -272,13 +272,20 @@ def main():
     procs: list[tuple[str, subprocess.Popen]] = []
     try:
         # Web monitor
-        host_val = (
-            "0.0.0.0"
-            if os.environ.get("PORT")
-            and args.monitor_host in ("127.0.0.1", "localhost")
-            else args.monitor_host
-        )
-        port_val = int(os.environ.get("PORT") or args.monitor_port)
+        # Déterminer host/port de manière robuste (Railway fournit PORT automatiquement)
+        port_env = (os.environ.get("PORT") or "").strip()
+        port_val = args.monitor_port
+        host_val = args.monitor_host
+        if port_env:
+            try:
+                p = int(port_env)
+                if 0 < p < 65536:
+                    port_val = p
+                    if args.monitor_host in ("127.0.0.1", "localhost"):
+                        host_val = "0.0.0.0"
+            except Exception:
+                # PORT invalide: on garde les valeurs par défaut
+                pass
         mon_cmd = [
             PYTHON,
             "monitor.py",
