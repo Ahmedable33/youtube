@@ -273,7 +273,10 @@ def main():
             if yaml is not None:
                 tmp_cfg = {"telegram": {"enabled": t_enabled, "token": token}}
                 sources_path.parent.mkdir(parents=True, exist_ok=True)
-                sources_path.write_text(yaml.safe_dump(tmp_cfg, allow_unicode=True, sort_keys=False), encoding="utf-8")
+                sources_path.write_text(
+                    yaml.safe_dump(tmp_cfg, allow_unicode=True, sort_keys=False),
+                    encoding="utf-8",
+                )
             else:
                 sources_path.parent.mkdir(parents=True, exist_ok=True)
                 content = f"telegram:\n  enabled: {'true' if t_enabled else 'false'}\n  token: '{token}'\n"
