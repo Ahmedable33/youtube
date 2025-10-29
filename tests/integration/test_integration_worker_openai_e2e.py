@@ -134,7 +134,9 @@ def test_worker_openai_end_to_end_with_seo_advanced(monkeypatch, tmp_path: Path)
     }
     cfg_path = tmp_path / "video.yaml"
     (tmp_path / "test.mp4").write_bytes(b"video")
-    cfg_path.write_text(yaml.safe_dump(cfg, allow_unicode=True, sort_keys=False), encoding="utf-8")
+    cfg_path.write_text(
+        yaml.safe_dump(cfg, allow_unicode=True, sort_keys=False), encoding="utf-8"
+    )
 
     # ---- Prepare queue task without meta to force AI ----
     queue_dir = tmp_path / "queue"
@@ -149,7 +151,12 @@ def test_worker_openai_end_to_end_with_seo_advanced(monkeypatch, tmp_path: Path)
     )
 
     # ---- Process queue ----
-    worker.process_queue(queue_dir=str(queue_dir), archive_dir=str(archive_dir), config_path=str(cfg_path), log_level="INFO")
+    worker.process_queue(
+        queue_dir=str(queue_dir),
+        archive_dir=str(archive_dir),
+        config_path=str(cfg_path),
+        log_level="INFO",
+    )
 
     # ---- Assertions ----
     archived = archive_dir / task_path.name

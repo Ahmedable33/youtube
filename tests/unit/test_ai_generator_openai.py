@@ -115,7 +115,9 @@ def test_openai_model_env_override_is_used(monkeypatch, tmp_path):
 
     cfg_path = tmp_path / "video.yaml"
     cfg_path.write_text(
-        yaml.safe_dump({"seo": {"provider": "openai"}}, allow_unicode=True, sort_keys=False),
+        yaml.safe_dump(
+            {"seo": {"provider": "openai"}}, allow_unicode=True, sort_keys=False
+        ),
         encoding="utf-8",
     )
 
@@ -135,11 +137,17 @@ def test_openai_missing_api_key_falls_back_to_heuristic(monkeypatch, tmp_path):
 
     monkeypatch.delenv("OPENAI_API_KEY", raising=False)
     # Ensure the code path tries to use OpenAI but fails due to missing key
-    monkeypatch.setattr(ai_gen, "_get_openai_client", lambda: (_ for _ in ()).throw(RuntimeError("missing key")))
+    monkeypatch.setattr(
+        ai_gen,
+        "_get_openai_client",
+        lambda: (_ for _ in ()).throw(RuntimeError("missing key")),
+    )
 
     cfg_path = tmp_path / "video.yaml"
     cfg_path.write_text(
-        yaml.safe_dump({"seo": {"provider": "openai"}}, allow_unicode=True, sort_keys=False),
+        yaml.safe_dump(
+            {"seo": {"provider": "openai"}}, allow_unicode=True, sort_keys=False
+        ),
         encoding="utf-8",
     )
 
