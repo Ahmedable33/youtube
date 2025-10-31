@@ -1,4 +1,5 @@
 """Unit tests for email notifications in worker"""
+
 from __future__ import annotations
 
 import importlib
