@@ -1606,6 +1606,9 @@ def build_application(cfg: TelegramConfig) -> Application:
 
 
 def run_bot_from_sources(sources_path: str | Path) -> None:
+    import time
+    from telegram.error import Conflict
+
     data = load_sources_yaml(sources_path)
     tg = data.get("telegram") or {}
     cfg = TelegramConfig.from_dict(tg)
@@ -1613,4 +1616,34 @@ def run_bot_from_sources(sources_path: str | Path) -> None:
     logging.getLogger("httpx").setLevel(logging.WARNING)
     app = build_application(cfg)
     log.info("Démarrage du bot Telegram…")
-    app.run_polling(allowed_updates=Update.ALL_TYPES)
+
+    # Gestion d'erreur avec backoff exponentiel pour les conflits
+    max_retries = 5
+    backoff_base = 2.0
+    retry_count = 0
+
+    while retry_count < max_retries:
+        try:
+            app.run_polling(allowed_updates=Update.ALL_TYPES)
+            break  # Succès, sortir de la boucle
+        except Conflict:
+            retry_count += 1
+            wait_time = backoff_base**retry_count
+            log.warning(
+                f"Conflit Telegram détecté (instance multiple?) - "
+                f"Tentative {retry_count}/{max_retries} - "
+                f"Attente {wait_time:.1f}s avant retry"
+            )
+            if retry_count >= max_retries:
+                log.error(
+                    f"Arrêt du bot après {max_retries} tentatives. "
+                    "Vérifiez qu'une seule instance du bot tourne avec ce token."
+                )
+                raise
+            time.sleep(wait_time)
+        except KeyboardInterrupt:
+            log.info("Arrêt du bot demandé")
+            raise
+        except Exception as e:
+            log.error(f"Erreur inattendue du bot Telegram: {e}")
+            raise
