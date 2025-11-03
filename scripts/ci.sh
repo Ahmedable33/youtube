@@ -16,10 +16,16 @@ run_lint() {
   if [ -d .git ]; then
     git config --global --add safe.directory /app || true
     if git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
-      echo "[CI] Running pre-commit (skip pytest hook to avoid duplicate test runs)"
-      if ! SKIP=pytest pre-commit run --all-files; then
-        echo "[CI] pre-commit reported issues; re-running after auto-fixes"
-        SKIP=pytest pre-commit run --all-files || (echo "[CI] pre-commit failed after retry" && exit 1)
+      echo "[CI] Running Black check (no auto-fix)"
+      if ! black --check .; then
+        echo "[CI] Black found formatting issues. Please run 'black .' locally and commit the changes."
+        exit 1
+      fi
+
+      echo "[CI] Running pre-commit (skip pytest and black to avoid duplicate runs/auto-fix)"
+      if ! SKIP=pytest,black pre-commit run --all-files; then
+        echo "[CI] pre-commit failed"
+        exit 1
       fi
     else
       echo "[CI] Not inside a Git work tree; skipping pre-commit"
