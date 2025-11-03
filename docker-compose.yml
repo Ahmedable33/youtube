@@ -31,7 +31,7 @@ services:
     container_name: youtube-app
     restart: unless-stopped
     # Resource limits (compose)
-    cpus: "2.0"
+    cpus: "1.0"
     mem_limit: "4g"
     logging:
       driver: json-file
@@ -48,6 +48,10 @@ services:
       - ENVIRONMENT=production
       - TELEGRAM_ENABLED=true
       - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+      # Limit internal threading to reduce CPU pressure
+      - OMP_NUM_THREADS=2
+      - OPENBLAS_NUM_THREADS=2
+      - NUMEXPR_NUM_THREADS=2
 
     ports:
       - "127.0.0.1:8000:8000"

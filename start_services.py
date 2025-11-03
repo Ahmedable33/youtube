@@ -251,7 +251,11 @@ def main():
     )
     args = ap.parse_args()
     if os.environ.get("LOG_LEVEL"):
-        args.log_level = os.environ.get("LOG_LEVEL") or args.log_level
+        raw = (os.environ.get("LOG_LEVEL") or "").strip()
+        # Sanitize values like "INFO,WARNING" or "info" -> pick first valid, uppercased
+        cleaned = raw.split(",")[0].strip().upper()
+        if cleaned in {"DEBUG", "INFO", "WARNING", "ERROR"}:
+            args.log_level = cleaned
     _ensure_oauth_files_from_env()
 
     video_cfg = _read_yaml(Path(args.config))
