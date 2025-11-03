@@ -1111,9 +1111,9 @@ def process_queue(
                     # Marquer la tâche comme bloquée
                     task["status"] = "blocked"
                     task["error"] = "uploadLimitExceeded"
-                    task["error_message"] = (
-                        "Limite quotidienne YouTube atteinte. Réessayez dans 24h."
-                    )
+                    task[
+                        "error_message"
+                    ] = "Limite quotidienne YouTube atteinte. Réessayez dans 24h."
                     task["blocked_at"] = datetime.now().isoformat()
 
                     # Sauvegarder la tâche bloquée
