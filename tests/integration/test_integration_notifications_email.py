@@ -1,4 +1,5 @@
 """Integration test: worker sends email after successful upload"""
+
 from __future__ import annotations
 
 from pathlib import Path

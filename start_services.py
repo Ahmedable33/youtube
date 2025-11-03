@@ -256,10 +256,33 @@ def main():
 
     video_cfg = _read_yaml(Path(args.config))
     # Charger la configuration des sources (pour savoir si le bot Telegram doit être lancé)
-    sources_cfg = _read_yaml(Path(args.sources))
+    sources_path = Path(args.sources)
+    sources_cfg = _read_yaml(sources_path)
     tcfg = (sources_cfg or {}).get("telegram") or {}
-    t_enabled = bool(tcfg.get("enabled", False))
-    token = str(tcfg.get("token") or "").strip()
+    # Overrides via environment (useful for Railway)
+    env_enabled = os.environ.get("TELEGRAM_ENABLED")
+    env_token = os.environ.get("TELEGRAM_BOT_TOKEN")
+    if env_enabled is not None:
+        t_enabled = str(env_enabled).strip().lower() in ("1", "true", "yes", "on")
+    else:
+        t_enabled = bool(tcfg.get("enabled", False))
+    token = str((env_token if env_token else tcfg.get("token")) or "").strip()
+    # If token provided via env and sources file missing, create a minimal one
+    if token and not sources_path.exists():
+        try:
+            if yaml is not None:
+                tmp_cfg = {"telegram": {"enabled": t_enabled, "token": token}}
+                sources_path.parent.mkdir(parents=True, exist_ok=True)
+                sources_path.write_text(
+                    yaml.safe_dump(tmp_cfg, allow_unicode=True, sort_keys=False),
+                    encoding="utf-8",
+                )
+            else:
+                sources_path.parent.mkdir(parents=True, exist_ok=True)
+                content = f"telegram:\n  enabled: {'true' if t_enabled else 'false'}\n  token: '{token}'\n"
+                sources_path.write_text(content, encoding="utf-8")
+        except Exception:
+            pass
     token_placeholder = (not token) or token in (
         "VOTRE_BOT_TOKEN_ICI",
         "YOUR_BOT_TOKEN_HERE",

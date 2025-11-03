@@ -29,9 +29,6 @@ services:
   app:
     build: .
     container_name: youtube-app
-    depends_on:
-      ollama:
-        condition: service_healthy
     restart: unless-stopped
     # Resource limits (compose)
     cpus: "2.0"
@@ -44,15 +41,13 @@ services:
     environment:
       # Pass-through secrets from host .env or environment
       - SEO_YOUTUBE_API_KEY=${SEO_YOUTUBE_API_KEY}
-      # Make app use docker network host for Ollama
-      - OLLAMA_HOST=http://ollama:11434
-      - OLLAMA_TIMEOUT=600
-      - OLLAMA_NUM_PREDICT=200
       - EMAIL_PASSWORD=${EMAIL_PASSWORD:-}
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - OPENAI_MODEL=gpt-4o-mini
       - LOG_LEVEL=INFO
       - ENVIRONMENT=production
+      - TELEGRAM_ENABLED=true
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
 
     ports:
       - "127.0.0.1:8000:8000"
@@ -80,25 +75,6 @@ services:
       - traefik.http.routers.monitor.middlewares=monitor-auth@docker
       - traefik.http.middlewares.monitor-auth.basicauth.users=${MONITOR_BASIC_AUTH}
 
-  ollama:
-    image: ollama/ollama:latest
-    container_name: ollama
-    volumes:
-      - ollama:/root/.ollama
-    healthcheck:
-      test: ["CMD", "ollama", "--version"]
-      interval: 10s
-      timeout: 5s
-      retries: 30
-      start_period: 20s
-    restart: unless-stopped
-    cpus: "4.0"
-    mem_limit: "8g"
-    logging:
-      driver: json-file
-      options:
-        max-size: "10m"
-        max-file: "3"
 
   ci:
     build:
@@ -133,7 +109,6 @@ services:
 
 
 volumes:
-  ollama:
   letsencrypt:
 
 networks:

@@ -12,7 +12,7 @@ from typing import Dict, List, Any
 import shutil
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException, Request
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 import uvicorn
@@ -317,6 +317,19 @@ def create_app(queue_dir: str, archive_dir: str) -> FastAPI:
             return {"status": "success", "message": f"Tâche {task_file} supprimée"}
         else:
             raise HTTPException(status_code=404, detail="Tâche introuvable")
+
+    @app.get("/meta.json")
+    async def meta():
+        return {
+            "app": "YouTube Automation Monitor",
+            "version": "1.0.0",
+            "time": datetime.now().isoformat(),
+            "stats": monitor.get_task_stats(),
+        }
+
+    @app.get("/favicon.ico")
+    async def favicon():
+        return Response(status_code=204)
 
     @app.websocket("/ws")
     async def websocket_endpoint(websocket: WebSocket):
